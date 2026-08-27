@@ -1,0 +1,18 @@
+import pandas as pd
+import numpy as np
+
+df = pd.read_csv('processed_data/loghub/detection_train.csv')
+
+# Assign priority based on a numeric feature (adjust column name)
+print(df.columns.tolist())  # first run this to see available columns
+"""import pandas as pd
+
+# Run this once to fix the triage CSV
+df = pd.read_csv('processed_data/loghub/triage_train.csv')
+print(df['priority'].value_counts())  # check priority distribution"""
+"""import pandas as pd
+for split in ['train', 'test']:
+    df = pd.read_csv(f'processed_data/loghub/detection_train.csv')
+    df['label'] = df['priority']
+    df.to_csv(f'processed_data/loghub/triage_{split}.csv', index=False)
+    print(f'{split}:', df['label'].value_counts().to_dict())"""

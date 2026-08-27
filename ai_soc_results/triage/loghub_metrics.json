@@ -1,0 +1,102 @@
+{
+  "metrics": {
+    "accuracy": 0.99756,
+    "precision": 0.9975597085886079,
+    "recall": 0.99756,
+    "f1_score": 0.9975595613619295,
+    "tpr": 0.9988540323735855,
+    "fpr": 0.003005259203606311,
+    "auc_roc": null,
+    "avg_precision": null,
+    "confusion_matrix": [
+      [
+        3981,
+        12,
+        0,
+        7
+      ],
+      [
+        8,
+        6973,
+        19,
+        0
+      ],
+      [
+        0,
+        12,
+        11988,
+        0
+      ],
+      [
+        3,
+        0,
+        0,
+        1997
+      ]
+    ]
+  },
+  "cv_results": {
+    "accuracy": {
+      "mean": 0.9991916666666668,
+      "std": 0.00017989194287434596
+    },
+    "precision": {
+      "mean": 0.9991918133734561,
+      "std": 0.00017989534511563847
+    },
+    "recall": {
+      "mean": 0.9991916666666668,
+      "std": 0.00017989194287434596
+    },
+    "f1_score": {
+      "mean": 0.999191622801279,
+      "std": 0.00017989884256124062
+    },
+    "tpr": {
+      "mean": 0.9994329050761778,
+      "std": 0.00047847585244524424
+    },
+    "fpr": {
+      "mean": 0.00023343893983998167,
+      "std": 0.0003092776528159581
+    }
+  },
+  "feat_names": [
+    "log_feature_0",
+    "log_feature_1",
+    "log_feature_2",
+    "log_feature_3",
+    "log_feature_4",
+    "log_feature_5",
+    "log_feature_6",
+    "log_feature_7",
+    "log_feature_8",
+    "log_feature_9",
+    "log_feature_10",
+    "log_feature_11",
+    "log_feature_12",
+    "log_feature_13",
+    "log_feature_14",
+    "log_feature_15",
+    "log_feature_16",
+    "log_feature_17",
+    "log_feature_18",
+    "log_feature_19",
+    "log_feature_20",
+    "log_feature_21",
+    "log_feature_22",
+    "log_feature_23",
+    "log_feature_24",
+    "log_feature_25",
+    "log_feature_26",
+    "log_feature_27",
+    "log_feature_28",
+    "log_feature_29",
+    "log_feature_30",
+    "log_feature_31",
+    "log_feature_32",
+    "log_feature_33",
+    "log_feature_34"
+  ],
+  "timestamp": "2026-05-05T16:37:15.906814"
+}

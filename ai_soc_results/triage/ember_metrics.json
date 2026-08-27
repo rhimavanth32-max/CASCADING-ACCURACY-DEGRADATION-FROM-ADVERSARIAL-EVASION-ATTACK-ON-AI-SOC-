@@ -1,0 +1,128 @@
+{
+  "metrics": {
+    "accuracy": 1.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1_score": 1.0,
+    "tpr": 1.0,
+    "fpr": 0.0,
+    "auc_roc": null,
+    "avg_precision": null,
+    "confusion_matrix": [
+      [
+        2000,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        15000,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        8000,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        2000,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        3000
+      ]
+    ]
+  },
+  "cv_results": {
+    "accuracy": {
+      "mean": 1.0,
+      "std": 0.0
+    },
+    "precision": {
+      "mean": 1.0,
+      "std": 0.0
+    },
+    "recall": {
+      "mean": 1.0,
+      "std": 0.0
+    },
+    "f1_score": {
+      "mean": 1.0,
+      "std": 0.0
+    },
+    "tpr": {
+      "mean": 1.0,
+      "std": 0.0
+    },
+    "fpr": {
+      "mean": 0.0,
+      "std": 0.0
+    }
+  },
+  "feat_names": [
+    "pe_feature_0",
+    "pe_feature_1",
+    "pe_feature_2",
+    "pe_feature_3",
+    "pe_feature_4",
+    "pe_feature_5",
+    "pe_feature_6",
+    "pe_feature_7",
+    "pe_feature_8",
+    "pe_feature_9",
+    "pe_feature_10",
+    "pe_feature_11",
+    "pe_feature_12",
+    "pe_feature_13",
+    "pe_feature_14",
+    "pe_feature_15",
+    "pe_feature_16",
+    "pe_feature_17",
+    "pe_feature_18",
+    "pe_feature_19",
+    "pe_feature_20",
+    "pe_feature_21",
+    "pe_feature_22",
+    "pe_feature_23",
+    "pe_feature_24",
+    "pe_feature_25",
+    "pe_feature_26",
+    "pe_feature_27",
+    "pe_feature_28",
+    "pe_feature_29",
+    "pe_feature_30",
+    "pe_feature_31",
+    "pe_feature_32",
+    "pe_feature_33",
+    "pe_feature_34",
+    "pe_feature_35",
+    "pe_feature_36",
+    "pe_feature_37",
+    "pe_feature_38",
+    "pe_feature_39",
+    "pe_feature_40",
+    "pe_feature_41",
+    "pe_feature_42",
+    "pe_feature_43",
+    "pe_feature_44",
+    "pe_feature_45",
+    "pe_feature_46",
+    "pe_feature_47",
+    "pe_feature_48",
+    "pe_feature_49"
+  ],
+  "timestamp": "2026-05-05T15:43:49.352898"
+}

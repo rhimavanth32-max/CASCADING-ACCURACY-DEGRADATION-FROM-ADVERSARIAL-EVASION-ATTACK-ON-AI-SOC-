@@ -1,0 +1,2490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AI-SOC — Adversarial Evasion Attack Dashboard</title>
+<style>
+/* ── Fonts ────────────────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700;900&display=swap');
+
+/* ── Variables ───────────────────────────────────────────────────────── */
+:root {
+  --bg:        #050c14;
+  --bg2:       #091420;
+  --bg3:       #0d1e2d;
+  --panel:     #0a1726;
+  --border:    #1a3350;
+  --border2:   #0f2540;
+  --blue:      #00d4ff;
+  --blue2:     #0088cc;
+  --blue3:     #003d6b;
+  --amber:     #ffb300;
+  --amber2:    #e65100;
+  --red:       #ff3d3d;
+  --red2:      #9b0000;
+  --green:     #00e676;
+  --green2:    #00897b;
+  --purple:    #b388ff;
+  --text:      #c8d8e8;
+  --text2:     #7a9ab8;
+  --text3:     #3d5a72;
+  --mono:      'Share Tech Mono', monospace;
+  --sans:      'Exo 2', sans-serif;
+  --glow-blue: 0 0 12px rgba(0,212,255,.45);
+  --glow-red:  0 0 12px rgba(255,61,61,.45);
+  --glow-grn:  0 0 12px rgba(0,230,118,.35);
+  --glow-amb:  0 0 12px rgba(255,179,0,.45);
+}
+
+/* ── Reset ───────────────────────────────────────────────────────────── */
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow-x:hidden}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--sans);
+  font-size:13px;
+  line-height:1.5;
+}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* ── Scanline overlay ────────────────────────────────────────────────── */
+body::before{
+  content:'';
+  position:fixed;inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.08) 2px,rgba(0,0,0,.08) 4px);
+  pointer-events:none;z-index:9999;
+}
+
+/* ── Layout ──────────────────────────────────────────────────────────── */
+#app{display:flex;flex-direction:column;min-height:100vh;max-width:1800px;margin:0 auto;padding:0 12px}
+
+/* ── Header ──────────────────────────────────────────────────────────── */
+header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 0 10px;
+  border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:100;
+  background:rgba(5,12,20,.97);
+  backdrop-filter:blur(8px);
+}
+.hd-left{display:flex;align-items:center;gap:14px}
+.logo-box{
+  width:44px;height:44px;
+  background:linear-gradient(135deg,var(--blue3),var(--blue2));
+  border:1px solid var(--blue);
+  border-radius:6px;
+  display:grid;place-items:center;
+  font-size:22px;
+  box-shadow:var(--glow-blue);
+}
+.hd-title{font-weight:900;font-size:16px;letter-spacing:.05em;color:#fff}
+.hd-sub{font-family:var(--mono);font-size:10px;color:var(--text2);margin-top:2px}
+.hd-right{display:flex;align-items:center;gap:18px}
+.status-pill{
+  display:flex;align-items:center;gap:6px;
+  padding:4px 12px;border-radius:20px;
+  background:var(--bg3);border:1px solid var(--border);
+  font-family:var(--mono);font-size:10px;
+}
+.dot{width:7px;height:7px;border-radius:50%;animation:pulse 1.8s infinite}
+.dot.ok {background:var(--green);box-shadow:var(--glow-grn)}
+.dot.warn{background:var(--amber);box-shadow:var(--glow-amb)}
+.dot.err {background:var(--red);  box-shadow:var(--glow-red)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+#clock{font-family:var(--mono);font-size:12px;color:var(--blue)}
+
+/* ── Tabs ────────────────────────────────────────────────────────────── */
+nav{
+  display:flex;gap:4px;padding:8px 0;
+  border-bottom:1px solid var(--border2);
+}
+.tab{
+  padding:6px 18px;border-radius:4px;cursor:pointer;
+  font-size:12px;font-weight:600;letter-spacing:.05em;
+  color:var(--text2);background:transparent;border:1px solid transparent;
+  transition:all .2s;text-transform:uppercase;
+}
+.tab:hover{color:var(--blue);border-color:var(--border)}
+.tab.active{color:var(--blue);background:var(--bg3);border-color:var(--blue);box-shadow:var(--glow-blue)}
+
+/* ── Panels ──────────────────────────────────────────────────────────── */
+.panel{
+  background:var(--panel);border:1px solid var(--border);
+  border-radius:8px;padding:16px;position:relative;overflow:hidden;
+}
+.panel::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--blue),transparent);
+  opacity:.5;
+}
+.panel-title{
+  font-size:11px;font-weight:700;letter-spacing:.12em;
+  color:var(--blue);text-transform:uppercase;margin-bottom:12px;
+  display:flex;align-items:center;gap:8px;
+}
+.panel-title span{
+  background:var(--blue);color:#000;
+  font-family:var(--mono);font-size:9px;padding:1px 6px;border-radius:3px;
+}
+
+/* ── Grid ────────────────────────────────────────────────────────────── */
+main{flex:1;padding:12px 0}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
+.col-span2{grid-column:span 2}
+
+/* ── KPI cards ───────────────────────────────────────────────────────── */
+.kpi{
+  background:var(--bg3);border:1px solid var(--border);border-radius:8px;
+  padding:14px;display:flex;flex-direction:column;gap:4px;
+}
+.kpi-label{font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--text2);text-transform:uppercase}
+.kpi-value{font-family:var(--mono);font-size:26px;font-weight:700;color:var(--blue)}
+.kpi-value.warn{color:var(--amber)}
+.kpi-value.danger{color:var(--red)}
+.kpi-value.ok{color:var(--green)}
+.kpi-delta{font-size:10px;color:var(--text3)}
+
+/* ── Dataset selector ────────────────────────────────────────────────── */
+.ds-btn{
+  padding:6px 16px;border-radius:4px;cursor:pointer;
+  font-size:11px;font-weight:600;letter-spacing:.06em;
+  border:1px solid var(--border);background:var(--bg3);color:var(--text2);
+  transition:all .2s;text-transform:uppercase;
+}
+.ds-btn:hover{border-color:var(--blue);color:var(--blue)}
+.ds-btn.active{border-color:var(--blue);background:rgba(0,212,255,.12);color:var(--blue);box-shadow:var(--glow-blue)}
+.selector-row{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+
+/* ── Attack selector ─────────────────────────────────────────────────── */
+select,input[type=range]{
+  background:var(--bg3);border:1px solid var(--border);color:var(--text);
+  border-radius:4px;padding:5px 10px;font-size:11px;font-family:var(--sans);
+  cursor:pointer;outline:none;
+}
+select:focus,select:hover{border-color:var(--blue)}
+input[type=range]{padding:0;cursor:pointer;accent-color:var(--blue)}
+label{font-size:11px;color:var(--text2)}
+
+/* ── Pipeline cascade ────────────────────────────────────────────────── */
+.pipeline{display:flex;align-items:stretch;gap:0;margin-bottom:16px;overflow-x:auto}
+.layer-card{
+  flex:1;min-width:150px;
+  background:var(--bg3);border:1px solid var(--border);
+  padding:12px;position:relative;transition:all .3s;
+}
+.layer-card:not(:last-child)::after{
+  content:'▶';position:absolute;right:-14px;top:50%;transform:translateY(-50%);
+  color:var(--text3);font-size:18px;z-index:2;
+}
+.layer-card:first-child{border-radius:8px 0 0 8px}
+.layer-card:last-child{border-radius:0 8px 8px 0}
+.layer-name{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;margin-bottom:2px}
+.layer-algo{font-size:10px;color:var(--text3);font-family:var(--mono);margin-bottom:8px}
+.layer-metric{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.layer-metric-label{font-size:10px;color:var(--text2)}
+.layer-metric-val{font-family:var(--mono);font-size:11px;font-weight:700}
+.status-badge{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:2px 8px;border-radius:12px;font-size:9px;font-weight:700;letter-spacing:.08em;
+  margin-top:8px;text-transform:uppercase;
+}
+.status-badge.STABLE {background:rgba(0,230,118,.15);color:var(--green);border:1px solid rgba(0,230,118,.3)}
+.status-badge.DEGRADED{background:rgba(255,179,0,.15);color:var(--amber);border:1px solid rgba(255,179,0,.3)}
+.status-badge.BREACHED{background:rgba(255,61,61,.18);color:var(--red);  border:1px solid rgba(255,61,61,.35);
+  animation:flash .8s infinite alternate}
+@keyframes flash{from{opacity:1}to{opacity:.5}}
+.layer-card.STABLE {border-color:rgba(0,230,118,.3)}
+.layer-card.DEGRADED{border-color:rgba(255,179,0,.4)}
+.layer-card.BREACHED{border-color:rgba(255,61,61,.6);box-shadow:0 0 16px rgba(255,61,61,.2)}
+
+/* ── Bar chart ───────────────────────────────────────────────────────── */
+.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.bar-label{width:80px;font-size:10px;color:var(--text2);flex-shrink:0;text-align:right}
+.bar-track{flex:1;height:10px;background:var(--bg2);border-radius:5px;overflow:hidden;position:relative}
+.bar-fill{height:100%;border-radius:5px;transition:width .5s ease;position:relative}
+.bar-fill.clean{background:linear-gradient(90deg,var(--blue2),var(--blue))}
+.bar-fill.adv{background:linear-gradient(90deg,var(--red2),var(--red))}
+.bar-fill.drop{background:linear-gradient(90deg,var(--amber2),var(--amber))}
+.bar-val{width:50px;font-family:var(--mono);font-size:10px;color:var(--text);text-align:right;flex-shrink:0}
+
+/* ── Heat table ──────────────────────────────────────────────────────── */
+.htable{width:100%;border-collapse:collapse;font-size:11px}
+.htable th{
+  padding:6px 10px;background:var(--bg2);color:var(--text2);
+  text-align:center;font-size:10px;letter-spacing:.06em;font-weight:700;
+  border-bottom:1px solid var(--border);text-transform:uppercase;
+}
+.htable td{
+  padding:6px 10px;text-align:center;border-bottom:1px solid var(--border2);
+  font-family:var(--mono);font-size:11px;
+}
+.htable tr:hover td{background:rgba(0,212,255,.04)}
+
+/* ── Buttons ─────────────────────────────────────────────────────────── */
+.btn{
+  padding:8px 20px;border-radius:5px;cursor:pointer;
+  font-size:12px;font-weight:700;letter-spacing:.08em;
+  border:none;transition:all .2s;text-transform:uppercase;font-family:var(--sans);
+}
+.btn-primary{
+  background:linear-gradient(135deg,var(--blue2),var(--blue));
+  color:#000;box-shadow:var(--glow-blue);
+}
+.btn-primary:hover{filter:brightness(1.15);transform:translateY(-1px)}
+.btn-primary:active{transform:translateY(0)}
+.btn-danger{
+  background:linear-gradient(135deg,#9b0000,var(--red));
+  color:#fff;box-shadow:var(--glow-red);
+}
+.btn-danger:hover{filter:brightness(1.12);transform:translateY(-1px)}
+.btn-outline{
+  background:transparent;border:1px solid var(--blue);color:var(--blue);
+}
+.btn-outline:hover{background:rgba(0,212,255,.1)}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important}
+
+/* ── Progress bar ─────────────────────────────────────────────────────── */
+.prog-bar{height:4px;background:var(--bg2);border-radius:2px;overflow:hidden;margin:6px 0}
+.prog-fill{height:100%;border-radius:2px;transition:width .6s}
+
+/* ── Log feed ────────────────────────────────────────────────────────── */
+#live-feed{
+  height:280px;overflow-y:auto;
+  background:var(--bg);border:1px solid var(--border2);border-radius:6px;
+  padding:8px;font-family:var(--mono);font-size:10px;color:var(--text2);
+}
+.log-line{padding:2px 0;border-bottom:1px solid rgba(26,51,80,.3);display:flex;gap:8px}
+.log-ts{color:var(--text3);flex-shrink:0}
+.log-lvl{width:14px;flex-shrink:0}
+.log-msg{flex:1;word-break:break-all}
+.lv-ok   {color:var(--green)}
+.lv-warn {color:var(--amber)}
+.lv-err  {color:var(--red)}
+.lv-info {color:var(--blue)}
+
+/* ── MITRE table ─────────────────────────────────────────────────────── */
+.mitre-tag{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:2px 8px;border-radius:3px;font-size:9px;font-weight:700;
+  background:rgba(179,136,255,.15);color:var(--purple);
+  border:1px solid rgba(179,136,255,.3);font-family:var(--mono);
+  margin:2px;
+}
+
+/* ── Summary numbers ─────────────────────────────────────────────────── */
+.big-num{font-family:var(--mono);font-size:36px;font-weight:700;line-height:1}
+
+/* ── Spinner ─────────────────────────────────────────────────────────── */
+.spinner{
+  width:20px;height:20px;border:2px solid var(--border);
+  border-top-color:var(--blue);border-radius:50%;
+  animation:spin .7s linear infinite;display:inline-block;vertical-align:middle;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Tooltip ─────────────────────────────────────────────────────────── */
+[title]{cursor:help}
+
+/* ── Responsive ──────────────────────────────────────────────────────── */
+@media(max-width:900px){
+  .grid-2,.grid-3,.grid-4{grid-template-columns:1fr}
+  .col-span2{grid-column:span 1}
+  .pipeline{flex-wrap:wrap}
+  .layer-card{border-radius:8px!important;min-width:130px}
+  .layer-card::after{display:none}
+}
+
+/* ── Section pages ───────────────────────────────────────────────────── */
+.page{display:none}.page.active{display:block}
+
+/* ── Attack animation overlay ────────────────────────────────────────── */
+#atk-overlay{
+  position:fixed;inset:0;
+  background:rgba(5,12,20,.85);
+  display:none;align-items:center;justify-content:center;
+  z-index:500;backdrop-filter:blur(4px);
+}
+#atk-overlay.show{display:flex}
+.atk-box{
+  background:var(--panel);border:1px solid var(--red);border-radius:12px;
+  padding:36px 48px;text-align:center;box-shadow:var(--glow-red);
+  max-width:400px;
+}
+.atk-title{font-size:20px;font-weight:900;color:var(--red);margin-bottom:8px}
+.atk-sub  {font-size:12px;color:var(--text2);font-family:var(--mono)}
+
+/* ── Divider ─────────────────────────────────────────────────────────── */
+.divider{height:1px;background:var(--border2);margin:12px 0}
+
+/* ── Flex helpers ────────────────────────────────────────────────────── */
+.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.spacer{flex:1}
+.mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}
+.mb8{margin-bottom:8px}.mb12{margin-bottom:12px}
+
+/* ── Radar canvas ────────────────────────────────────────────────────── */
+canvas{max-width:100%;display:block}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ═══════════════════════════════════ HEADER ════════════════════════════ -->
+<header>
+  <div class="hd-left">
+    <div class="logo-box">⚔</div>
+    <div>
+      <div class="hd-title">AI-SOC Adversarial Dashboard</div>
+      <div class="hd-sub">Cascading Accuracy Degradation from Adversarial Evasion Attacks</div>
+    </div>
+  </div>
+  <div class="hd-right">
+    <div class="status-pill"><span class="dot" id="api-dot"></span><span id="api-label">Connecting…</span></div>
+    <div class="status-pill"><span class="dot" id="pipe-dot"></span><span id="pipe-label">Pipeline</span></div>
+    <div class="status-pill"><span class="dot" id="adv-dot"></span><span id="adv-label">Adversarial</span></div>
+    <div id="clock"></div>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════ TABS ═════════════════════════════ -->
+<nav>
+  <div class="tab active" data-tab="overview">Overview</div>
+  <div class="tab" data-tab="attack">Attack Simulator</div>
+  <div class="tab" data-tab="metrics">Baseline Metrics</div>
+  <div class="tab" data-tab="realtime">Live Events</div>
+  <div class="tab" data-tab="mitre">MITRE ATT&amp;CK</div>
+  <div class="tab" data-tab="charts">📈 Accuracy Graphs</div>
+</nav>
+
+<main>
+
+<!-- ════════════════════════════════ OVERVIEW ════════════════════════════ -->
+<div class="page active" id="page-overview">
+  <!-- KPIs -->
+  <div class="grid-4" id="kpi-row">
+    <div class="kpi">
+      <div class="kpi-label">Datasets</div>
+      <div class="kpi-value" id="kpi-datasets">3</div>
+      <div class="kpi-delta">CIC-IDS2017 · EMBER · LogHub</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Pipeline Layers</div>
+      <div class="kpi-value" id="kpi-layers">5</div>
+      <div class="kpi-delta">Ingest · Triage · Detect · SIEM · SOAR</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Avg Clean Accuracy</div>
+      <div class="kpi-value ok" id="kpi-acc">—</div>
+      <div class="kpi-delta">Across all layers &amp; datasets</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Models Trained</div>
+      <div class="kpi-value" id="kpi-models">—</div>
+      <div class="kpi-delta">RF · GB · MLP</div>
+    </div>
+  </div>
+
+  <!-- Dataset selector -->
+  <div class="selector-row">
+    <span style="font-size:11px;color:var(--text2);font-weight:700;">DATASET:</span>
+    <button class="ds-btn active" data-ds="cicids2017">CIC-IDS2017</button>
+    <button class="ds-btn" data-ds="ember">EMBER</button>
+    <button class="ds-btn" data-ds="loghub">LogHub</button>
+  </div>
+
+  <!-- Pipeline cascade -->
+  <div class="panel mb12">
+    <div class="panel-title">🛡 AI-SOC Pipeline — Clean Baseline <span id="pipeline-ds-label">CICIDS2017</span></div>
+    <div class="pipeline" id="pipeline-cards">
+      <!-- filled by JS -->
+    </div>
+  </div>
+
+  <!-- 2-col: accuracy bars + summary -->
+  <div class="grid-2">
+    <div class="panel">
+      <div class="panel-title">📊 Accuracy by Layer</div>
+      <div id="acc-bars"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">📈 F1-Score by Layer</div>
+      <div id="f1-bars"></div>
+    </div>
+  </div>
+
+  <!-- Full metrics table -->
+  <div class="panel mt12">
+    <div class="panel-title">📋 Full Metrics Table</div>
+    <table class="htable" id="metrics-table">
+      <thead>
+        <tr>
+          <th>Layer</th><th>Algorithm</th>
+          <th>Accuracy</th><th>F1</th><th>Precision</th><th>Recall</th>
+          <th>TPR</th><th>FPR</th><th>AUC-ROC</th>
+        </tr>
+      </thead>
+      <tbody id="metrics-tbody"></tbody>
+    </table>
+  </div>
+</div><!-- /overview -->
+
+<!-- ══════════════════════════════ ATTACK SIM ════════════════════════════ -->
+<div class="page" id="page-attack">
+  <div class="grid-2 mb12">
+    <!-- Controls -->
+    <div class="panel">
+      <div class="panel-title">⚔ Attack Configuration</div>
+      <div class="selector-row">
+        <span style="font-size:11px;color:var(--text2);font-weight:700;">DATASET:</span>
+        <button class="ds-btn active" data-ds2="cicids2017">CIC-IDS2017</button>
+        <button class="ds-btn" data-ds2="ember">EMBER</button>
+        <button class="ds-btn" data-ds2="loghub">LogHub</button>
+      </div>
+
+      <div class="row mb8">
+        <label>Attack Type:</label>
+        <select id="atk-select" style="flex:1">
+          <optgroup label="FGSM">
+            <option value="fgsm_001">FGSM ε=0.01</option>
+            <option value="fgsm_005">FGSM ε=0.05</option>
+            <option value="fgsm_010" selected>FGSM ε=0.10</option>
+            <option value="fgsm_020">FGSM ε=0.20</option>
+            <option value="fgsm_030">FGSM ε=0.30</option>
+          </optgroup>
+          <optgroup label="PGD">
+            <option value="pgd_001">PGD ε=0.01</option>
+            <option value="pgd_005">PGD ε=0.05</option>
+            <option value="pgd_010">PGD ε=0.10</option>
+            <option value="pgd_020">PGD ε=0.20</option>
+            <option value="pgd_030">PGD ε=0.30</option>
+          </optgroup>
+          <optgroup label="MI-FGSM">
+            <option value="mifgsm_010">MI-FGSM ε=0.10</option>
+            <option value="mifgsm_020">MI-FGSM ε=0.20</option>
+            <option value="mifgsm_030">MI-FGSM ε=0.30</option>
+          </optgroup>
+          <optgroup label="C&W">
+            <option value="cw_05">C&W c=0.5</option>
+            <option value="cw_10">C&W c=1.0</option>
+            <option value="cw_20">C&W c=2.0</option>
+          </optgroup>
+          <optgroup label="DeepFool">
+            <option value="deepfool_002">DeepFool ε=0.02</option>
+            <option value="deepfool_005">DeepFool ε=0.05</option>
+          </optgroup>
+          <optgroup label="Feature Manipulation">
+            <option value="feat_zero">Feature Zeroing</option>
+            <option value="feat_scale">Feature Scaling</option>
+            <option value="feat_noise">Feature Noise</option>
+            <option value="feat_swap">Feature Swap</option>
+            <option value="feat_invert">Feature Inversion</option>
+          </optgroup>
+          <optgroup label="Poisoning">
+            <option value="poison_mimicry">Poison – Mimicry</option>
+            <option value="poison_boundary">Poison – Boundary</option>
+            <option value="poison_gradmim">Poison – GradMim</option>
+          </optgroup>
+          <optgroup label="Advanced">
+            <option value="transfer_020">Transfer ε=0.20</option>
+            <option value="constrained_015">Constrained ε=0.15</option>
+            <option value="constrained_030">Constrained ε=0.30</option>
+            <option value="auto_020">AutoAttack ε=0.20</option>
+          </optgroup>
+        </select>
+      </div>
+
+      <div class="mb8" style="font-size:10px;color:var(--text3);line-height:1.5">
+        ε and attack strength are fixed by the selected config — each option above is a real, trained-and-tested experiment, not a live simulation.
+      </div>
+
+      <div class="row mt12">
+        <button class="btn btn-danger" id="run-attack" style="flex:1">⚔ Launch Attack</button>
+        <button class="btn btn-outline" id="reset-attack">Reset</button>
+      </div>
+
+      <div class="mt12" id="atk-source-info" style="font-size:10px;color:var(--text3)">
+        Source: <span id="atk-source" style="color:var(--blue)">Real trained/tested results — cicids2017_cascade_matrix.csv</span>
+      </div>
+    </div>
+
+    <!-- Summary cards -->
+    <div class="panel" style="display:flex;flex-direction:column;gap:10px">
+      <div class="panel-title">📉 Attack Impact Summary</div>
+      <div class="grid-2" style="gap:8px">
+        <div class="kpi">
+          <div class="kpi-label">Layers Breached</div>
+          <div class="kpi-value danger" id="atk-breached">—</div>
+          <div class="kpi-delta">of 5 layers</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Avg Acc Drop</div>
+          <div class="kpi-value warn" id="atk-avg-drop">—</div>
+          <div class="kpi-delta">absolute</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Max Evasion Rate</div>
+          <div class="kpi-value danger" id="atk-max-evasion">—</div>
+          <div class="kpi-delta">of samples evading</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Cascade Severity</div>
+          <div class="kpi-value" id="atk-severity">—</div>
+          <div class="kpi-delta">overall rating</div>
+        </div>
+      </div>
+      <div class="prog-bar" style="height:8px">
+        <div class="prog-fill" id="cascade-bar" style="width:0%;background:linear-gradient(90deg,var(--amber2),var(--red))"></div>
+      </div>
+      <div style="font-size:10px;color:var(--text2)">Cascade damage: <span id="cascade-pct" style="color:var(--red);font-family:var(--mono)">0%</span></div>
+    </div>
+  </div>
+
+  <!-- Pipeline cascade under attack -->
+  <div class="panel mb12">
+    <div class="panel-title">⚡ Pipeline Under Attack — Layer Degradation</div>
+    <div class="pipeline" id="atk-pipeline-cards">
+      <!-- filled by JS -->
+    </div>
+  </div>
+
+  <!-- Side by side bars: clean vs adversarial -->
+  <div class="grid-2">
+    <div class="panel">
+      <div class="panel-title">📊 Accuracy — Clean vs Adversarial</div>
+      <div id="cmp-bars-acc"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">📊 F1-Score — Clean vs Adversarial</div>
+      <div id="cmp-bars-f1"></div>
+    </div>
+  </div>
+
+  <!-- Detailed per-layer table -->
+  <div class="panel mt12">
+    <div class="panel-title">📋 Per-Layer Attack Results</div>
+    <table class="htable">
+      <thead>
+        <tr>
+          <th>Layer</th><th>Algorithm</th>
+          <th>Clean Acc</th><th>Adv Acc</th><th>Δ Acc</th>
+          <th>Clean F1</th><th>Adv F1</th><th>Δ F1</th>
+          <th>Evasion Rate</th><th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="atk-tbody"></tbody>
+    </table>
+  </div>
+
+  <!-- Attack forensics: perturbation + fooled-model analysis (real data) -->
+  <div class="panel mt12" id="forensics-panel" style="display:none">
+    <div class="panel-title">🔬 Attack Forensics — Perturbation &amp; Fooled-Model Analysis</div>
+    <table class="htable">
+      <thead>
+        <tr>
+          <th>Layer</th><th>Severity</th><th>Mean L2 Perturbation</th>
+          <th>% Inputs Unchanged</th><th>% Predictions Changed</th><th>% Truly Fooled</th>
+        </tr>
+      </thead>
+      <tbody id="forensics-tbody"></tbody>
+    </table>
+  </div>
+
+  <!-- Statistical tests (if available) -->
+  <div class="panel mt12" id="stat-panel" style="display:none">
+    <div class="panel-title">📐 Statistical Tests (Wilcoxon + 95% CI) — aggregated across all 30 attacks per layer</div>
+    <table class="htable">
+      <thead><tr><th>Layer</th><th>Mean Drop</th><th>Std</th><th>CI [lo, hi]</th><th>Wilcoxon p</th><th>Significant?</th></tr></thead>
+      <tbody id="stat-tbody"></tbody>
+    </table>
+  </div>
+</div><!-- /attack -->
+
+<!-- ═══════════════════════════════ METRICS ══════════════════════════════ -->
+<div class="page" id="page-metrics">
+  <div class="selector-row">
+    <span style="font-size:11px;color:var(--text2);font-weight:700;">DATASET:</span>
+    <button class="ds-btn active" data-ds3="cicids2017">CIC-IDS2017</button>
+    <button class="ds-btn" data-ds3="ember">EMBER</button>
+    <button class="ds-btn" data-ds3="loghub">LogHub</button>
+  </div>
+
+  <!-- All-datasets heatmap style -->
+  <div class="panel mb12">
+    <div class="panel-title">🌡 Multi-Dataset Metric Heatmap</div>
+    <table class="htable" id="heat-table">
+      <thead>
+        <tr><th>Dataset / Layer</th><th>Accuracy</th><th>F1</th><th>Precision</th><th>Recall</th><th>TPR</th><th>FPR</th><th>AUC-ROC</th></tr>
+      </thead>
+      <tbody id="heat-tbody"></tbody>
+    </table>
+  </div>
+
+  <div class="grid-2">
+    <div class="panel">
+      <div class="panel-title">📊 TPR / FPR by Layer</div>
+      <div id="tpr-bars"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">📊 AUC-ROC by Layer</div>
+      <div id="auc-bars"></div>
+    </div>
+  </div>
+</div><!-- /metrics -->
+
+<!-- ═══════════════════════════════ REALTIME ═════════════════════════════ -->
+<div class="page" id="page-realtime">
+  <div class="selector-row">
+    <span style="font-size:11px;color:var(--text2);font-weight:700;">DATASET:</span>
+    <button class="ds-btn active" data-ds4="cicids2017">CIC-IDS2017</button>
+    <button class="ds-btn" data-ds4="ember">EMBER</button>
+    <button class="ds-btn" data-ds4="loghub">LogHub</button>
+    <div class="spacer"></div>
+    <label style="font-size:11px">Events:</label>
+    <select id="rt-n"><option>5</option><option selected>10</option><option>20</option><option>50</option></select>
+    <label style="font-size:11px">Event Type:</label>
+    <select id="rt-event">
+      <option value="DDoS">DDoS</option>
+      <option value="PortScan">Port Scan</option>
+      <option value="BruteForce">Brute Force</option>
+      <option value="Botnet">Botnet</option>
+      <option value="Heartbleed">Heartbleed</option>
+      <option value="Benign">Benign</option>
+    </select>
+    <button class="btn btn-primary" id="run-rt">▶ Run Pipeline</button>
+    <button class="btn btn-outline" id="run-stream">⟳ Stream Events</button>
+  </div>
+
+  <!-- Normal event result -->
+  <div class="grid-2 mb12">
+    <div class="panel" id="normal-event-panel">
+      <div class="panel-title">🔍 Normal Event — Pipeline Result</div>
+      <div id="normal-event-body" style="color:var(--text3);font-size:11px">Run pipeline to see result…</div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">📟 SOAR Playbook</div>
+      <div id="playbook-body" style="color:var(--text3);font-size:11px">No active incident…</div>
+    </div>
+  </div>
+
+  <!-- Live event feed -->
+  <div class="panel">
+    <div class="panel-title row">
+      ⚡ Live Event Feed
+      <span class="dot ok" id="feed-dot" style="animation:none;opacity:.4"></span>
+      <span id="feed-count" style="font-family:var(--mono);font-size:10px;color:var(--text3)">0 events</span>
+    </div>
+    <div id="live-feed"></div>
+  </div>
+</div><!-- /realtime -->
+
+<!-- ═══════════════════════════════ MITRE ════════════════════════════════ -->
+<div class="page" id="page-mitre">
+  <div class="panel mb12">
+    <div class="panel-title">⚔ MITRE ATT&amp;CK Framework — Mapped Techniques</div>
+    <div id="mitre-content"></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">📖 Attack → MITRE Mapping</div>
+    <table class="htable">
+      <thead><tr><th>Threat Label</th><th>Tactic</th><th>Technique</th><th>TID</th></tr></thead>
+      <tbody id="mitre-tbody"></tbody>
+    </table>
+  </div>
+</div><!-- /mitre -->
+
+
+<!-- ═══════════════════════════ ACCURACY GRAPHS ══════════════════════════ -->
+<div class="page" id="page-charts">
+
+  <!-- Controls row -->
+  <div class="selector-row" style="margin-bottom:16px">
+    <span style="font-size:11px;color:var(--text2);font-weight:700;">DATASET:</span>
+    <button class="ds-btn active" data-ds5="cicids2017">CIC-IDS2017</button>
+    <button class="ds-btn" data-ds5="ember">EMBER</button>
+    <button class="ds-btn" data-ds5="loghub">LogHub</button>
+    <div class="spacer"></div>
+    <span style="font-size:11px;color:var(--text2);font-weight:700;">ATTACK:</span>
+    <select id="chart-atk-select" style="font-size:11px">
+      <option value="fgsm_010">FGSM ε=0.10</option>
+      <option value="fgsm_020">FGSM ε=0.20</option>
+      <option value="pgd_010">PGD ε=0.10</option>
+      <option value="pgd_020">PGD ε=0.20</option>
+      <option value="mifgsm_020">MI-FGSM ε=0.20</option>
+      <option value="cw_10">C&amp;W c=1.0</option>
+      <option value="auto_020">AutoAttack ε=0.20</option>
+    </select>
+    <button class="btn btn-primary" id="refresh-charts" style="padding:6px 16px">⟳ Refresh All</button>
+  </div>
+
+  <!-- Row 1: Line chart + Radar -->
+  <div class="grid-2 mb12">
+    <div class="panel">
+      <div class="panel-title">📉 Accuracy Cascade — Clean → Adversarial (Line)</div>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:8px">Each layer's accuracy before and after attack — shows cascade propagation</div>
+      <canvas id="chart-line" height="220"></canvas>
+      <div id="chart-line-legend" style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-size:10px"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">🕸 Multi-Metric Radar — Clean vs Adversarial</div>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:8px">Accuracy, F1, TPR, AUC-ROC, Precision — all 5 metrics at once</div>
+      <canvas id="chart-radar" height="220"></canvas>
+    </div>
+  </div>
+
+  <!-- Row 2: Grouped bar + Waterfall -->
+  <div class="grid-2 mb12">
+    <div class="panel">
+      <div class="panel-title">📊 Grouped Bar — Accuracy per Layer (Clean vs Adv)</div>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:8px">Side-by-side comparison per layer — shows per-layer impact clearly</div>
+      <canvas id="chart-grouped-bar" height="220"></canvas>
+    </div>
+    <div class="panel">
+      <div class="panel-title">🌊 Waterfall — Cumulative Accuracy Drop (Cascade)</div>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:8px">Each bar shows the incremental accuracy degradation added by that layer</div>
+      <canvas id="chart-waterfall" height="220"></canvas>
+    </div>
+  </div>
+
+  <!-- Row 3: Heatmap + Multi-attack line -->
+  <div class="grid-2 mb12">
+    <div class="panel">
+      <div class="panel-title">🌡 Heatmap — Attack Type × Layer Accuracy Drop</div>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:8px">Darker red = higher accuracy drop — compare attacks across all layers</div>
+      <canvas id="chart-heatmap" height="260"></canvas>
+    </div>
+    <div class="panel">
+      <div class="panel-title">📈 Multi-Attack Comparison — Accuracy Drop per Layer</div>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:8px">Multiple attack types overlaid — steeper slope = faster cascade</div>
+      <canvas id="chart-multi-attack" height="260"></canvas>
+      <div id="chart-multi-legend" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;font-size:10px"></div>
+    </div>
+  </div>
+
+  <!-- Row 4: Area chart (full width) -->
+  <div class="panel mb12">
+    <div class="panel-title">🏔 Area Chart — Accuracy Band (Clean ± Adversarial Range Across Datasets)</div>
+    <div style="font-size:10px;color:var(--text3);margin-bottom:8px">Shaded band shows the accuracy range across CIC-IDS2017, EMBER and LogHub under the selected attack</div>
+    <canvas id="chart-area" height="180"></canvas>
+  </div>
+
+  <!-- Row 5: Evasion rate donut + TPR/FPR scatter -->
+  <div class="grid-2">
+    <div class="panel">
+      <div class="panel-title">🍩 Evasion Rate by Layer (Donut)</div>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:8px">Proportion of samples evading detection at each pipeline layer</div>
+      <canvas id="chart-donut" height="220"></canvas>
+      <div id="chart-donut-legend" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;font-size:10px"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">⚡ TPR vs FPR Shift — Attack Impact</div>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:8px">Arrows show movement from clean (●) to adversarial (×) — top-left corner is ideal</div>
+      <canvas id="chart-scatter" height="220"></canvas>
+    </div>
+  </div>
+
+</div><!-- /charts -->
+
+</main>
+</div><!-- /app -->
+
+<!-- Attack overlay -->
+<div id="atk-overlay">
+  <div class="atk-box">
+    <div class="atk-title">⚔ ATTACK IN PROGRESS</div>
+    <div class="atk-sub mt8" id="atk-progress-msg">Launching adversarial perturbation…</div>
+    <div class="prog-bar mt12" style="height:6px"><div class="prog-fill" id="atk-prog" style="width:0%;background:linear-gradient(90deg,var(--red2),var(--red));transition:width .3s"></div></div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+//  CONFIG
+// ─────────────────────────────────────────────────────────────────────────────
+const API = 'http://localhost:5000';
+const LAYERS = ['ingestion','triage','detection','siem','soar'];
+const LAYER_ALGOS = {ingestion:'Random Forest',triage:'Gradient Boosting',detection:'MLP 512→64',siem:'Random Forest',soar:'Gradient Boosting'};
+const LAYER_COLORS = {ingestion:'#00d4ff',triage:'#00b0d4',detection:'#0088cc',siem:'#7c4dff',soar:'#00e676'};
+const DATASETS = ['cicids2017','ember','loghub'];
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  REAL TRAINED/TESTED RESULTS — CICIDS2017 (from cicids2017_cascade_matrix.csv,
+//  cicids2017_before_after_metrics.csv, cicids2017_statistical_tests.csv)
+//  These are exact experiment outputs, not simulated. Field key:
+//  ac/aa=acc clean/adv  ad=acc drop  ev=evasion  prc/pra=precision  f1c/f1a=f1
+//  tprc/tpra=TPR  fprc/fpra=FPR  aucc/auca=AUC-ROC  apc/apa=avg precision
+//  f1d/aucd=drops  sev=severity  l2=mean L2 perturbation  pctu=% unchanged
+//  pctfooled=% truly fooled  pctpred=% predictions changed
+// ─────────────────────────────────────────────────────────────────────────────
+const ATTACK_KEY_MAP = {"fgsm_001": "FGSM ε=0.01", "fgsm_005": "FGSM ε=0.05", "fgsm_010": "FGSM ε=0.10", "fgsm_020": "FGSM ε=0.20", "fgsm_030": "FGSM ε=0.30", "pgd_001": "PGD  ε=0.01", "pgd_005": "PGD  ε=0.05", "pgd_010": "PGD  ε=0.10", "pgd_020": "PGD  ε=0.20", "pgd_030": "PGD  ε=0.30", "mifgsm_010": "MI-FGSM ε=0.10", "mifgsm_020": "MI-FGSM ε=0.20", "mifgsm_030": "MI-FGSM ε=0.30", "cw_05": "C&W L2  c=0.5", "cw_10": "C&W L2  c=1.0", "cw_20": "C&W L2  c=2.0", "deepfool_002": "DeepFool os=0.02", "deepfool_005": "DeepFool os=0.05", "feat_zero": "FEAT-zero", "feat_scale": "FEAT-scale", "feat_noise": "FEAT-noise", "feat_swap": "FEAT-swap", "feat_invert": "FEAT-invert", "poison_mimicry": "POISON-mimicry", "poison_boundary": "POISON-boundary", "poison_gradmim": "POISON-grad-mim", "transfer_020": "TRANSFER ε=0.20", "constrained_015": "CONSTRAINED ε=0.15", "constrained_030": "CONSTRAINED ε=0.30", "auto_020": "AUTOATTACK ε=0.20"};
+const CLEAN_BASELINE_REAL = { cicids2017: {"ingestion":{"accuracy":0.9557,"precision":0.9732,"recall":0.9557,"f1_score":0.9424,"tpr":0.8983,"fpr":0.0053,"auc_roc":1.0,"avg_precision":1.0},"triage":{"accuracy":0.9999,"precision":0.9999,"recall":0.9999,"f1_score":0.9999,"tpr":0.9998,"fpr":0.0,"auc_roc":1.0,"avg_precision":1.0},"detection":{"accuracy":0.9997,"precision":0.9997,"recall":0.9997,"f1_score":0.9997,"tpr":0.9993,"fpr":0.0,"auc_roc":1.0,"avg_precision":1.0},"siem":{"accuracy":0.9558,"precision":0.9732,"recall":0.9558,"f1_score":0.9427,"tpr":0.8987,"fpr":0.0053,"auc_roc":1.0,"avg_precision":1.0},"soar":{"accuracy":0.9844,"precision":0.987,"recall":0.9844,"f1_score":0.9842,"tpr":0.9554,"fpr":0.0034,"auc_roc":1.0,"avg_precision":1.0}} };
+const REAL_ATTACK_RESULTS = { cicids2017: {"FGSM \u03b5=0.01":{"ingestion":{"ac":0.9557,"aa":0.9919,"ad":-0.0362,"ev":0.0,"prc":0.9732,"pra":0.9927,"f1c":0.9424,"f1a":0.9918,"tprc":0.8983,"tpra":0.9816,"fprc":0.0053,"fpra":0.001,"aucc":1.0,"auca":1.0,"apc":1.0,"apa":0.9999,"f1d":-0.0494,"aucd":0.0,"sev":"LOW","l2":0.088,"pctu":0.0,"pctfooled":0.0005,"pctpred":0.0372},"triage":{"ac":0.9999,"aa":0.9996,"ad":0.0003,"ev":0.0006,"prc":0.9999,"pra":0.9996,"f1c":0.9999,"f1a":0.9996,"tprc":0.9998,"tpra":0.9992,"fprc":0.0,"fpra":0.0001,"aucc":1.0,"auca":1.0,"apc":1.0,"apa":1.0,"f1d":0.0003,"aucd":0.0,"sev":"LOW","l2":0.088,"pctu":0.0,"pctfooled":0.0003,"pctpred":0.0004},"detection":{"ac":0.9997,"aa":0.9991,"ad":0.0006,"ev":0.0016,"prc":0.9997,"pra":0.9991,"f1c":0.9997,"f1a":0.9991,"tprc":0.9993,"tpra":0.9977,"fprc":0.0,"fpra":0.0001,"aucc":1.0,"auca":1.0,"apc":1.0,"apa":0.9999,"f1d":0.0006,"aucd":0.0,"sev":"LOW","l2":0.0881,"pctu":0.0,"pctfooled":0.0006,"pctpred":0.0006},"siem":{"ac":0.9558,"aa":0.9903,"ad":-0.0345,"ev":0.0,"prc":0.9732,"pra":0.9912,"f1c":0.9427,"f1a":0.9901,"tprc":0.8987,"tpra":0.978,"fprc":0.0053,"fpra":0.0012,"aucc":1.0,"auca":1.0,"apc":1.0,"apa":0.9984,"f1d":-0.0474,"aucd":0.0,"sev":"LOW","l2":0.0881,"pctu":0.0,"pctfooled":0.0008,"pctpred":0.0364},"soar":{"ac":0.9844,"aa":0.9898,"ad":-0.0054,"ev":0.0,"prc":0.987,"pra":0.9909,"f1c":0.9842,"f1a":0.9897,"tprc":0.9554,"tpra":0.9725,"fprc":0.0034,"fpra":0.0022,"aucc":1.0,"auca":1.0,"apc":1.0,"apa":0.9999,"f1d":-0.0055,"aucd":0.0,"sev":"LOW","l2":0.088,"pctu":0.0,"pctfooled":0.0011,"pctpred":0.0075}},"FGSM \u03b5=0.05":{"ingestion":{"ac":0.9557,"aa":0.9215,"ad":0.0342,"ev":0.0389,"prc":0.9732,"pra":0.9391,"f1c":0.9424,"f1a":0.9175,"tprc":0.8983,"tpra":0.8594,"fprc":0.0053,"fpra":0.0101,"aucc":1.0,"auca":0.9975,"apc":1.0,"apa":0.9576,"f1d":0.0249,"aucd":0.0025,"sev":"HIGH","l2":0.4402,"pctu":0.0,"pctfooled":0.066,"pctpred":0.1026},"triage":{"ac":0.9999,"aa":0.9509,"ad":0.049,"ev":0.1032,"prc":0.9999,"pra":0.957,"f1c":0.9999,"f1a":0.948,"tprc":0.9998,"tpra":0.8966,"fprc":0.0,"fpra":0.0154,"aucc":1.0,"auca":0.9984,"apc":1.0,"apa":0.9792,"f1d":0.0519,"aucd":0.0016,"sev":"HIGH","l2":0.4399,"pctu":0.0,"pctfooled":0.0491,"pctpred":0.0491},"detection":{"ac":0.9997,"aa":0.967,"ad":0.0327,"ev":0.0934,"prc":0.9997,"pra":0.9686,"f1c":0.9997,"f1a":0.9667,"tprc":0.9993,"tpra":0.9059,"fprc":0.0,"fpra":0.0034,"aucc":1.0,"auca":0.9994,"apc":1.0,"apa":0.938,"f1d":0.033,"aucd":0.0006,"sev":"HIGH","l2":0.4404,"pctu":0.0,"pctfooled":0.0327,"pctpred":0.0327},"siem":{"ac":0.9558,"aa":0.9203,"ad":0.0355,"ev":0.044,"prc":0.9732,"pra":0.9383,"f1c":0.9427,"f1a":0.9163,"tprc":0.8987,"tpra":0.8547,"fprc":0.0053,"fpra":0.0105,"aucc":1.0,"auca":0.9975,"apc":1.0,"apa":0.9572,"f1d":0.0264,"aucd":0.0025,"sev":"HIGH","l2":0.4403,"pctu":0.0,"pctfooled":0.0668,"pctpred":0.1022},"soar":{"ac":0.9844,"aa":0.9287,"ad":0.0557,"ev":0.136,"prc":0.987,"pra":0.9422,"f1c":0.9842,"f1a":0.9153,"tprc":0.9554,"tpra":0.8194,"fprc":0.0034,"fpra":0.0177,"aucc":1.0,"auca":0.999,"apc":1.0,"apa":0.9951,"f1d":0.0689,"aucd":0.001,"sev":"HIGH","l2":0.44,"pctu":0.0,"pctfooled":0.0622,"pctpred":0.0687}},"FGSM \u03b5=0.10":{"ingestion":{"ac":0.9557,"aa":0.8968,"ad":0.0589,"ev":0.105,"prc":0.9732,"pra":0.9208,"f1c":0.9424,"f1a":0.8836,"tprc":0.8983,"tpra":0.7933,"fprc":0.0053,"fpra":0.014,"aucc":1.0,"auca":0.9973,"apc":1.0,"apa":0.9381,"f1d":0.0588,"aucd":0.0027,"sev":"HIGH","l2":0.8804,"pctu":0.0,"pctfooled":0.0883,"pctpred":0.1241},"triage":{"ac":0.9999,"aa":0.9247,"ad":0.0752,"ev":0.158,"prc":0.9999,"pra":0.9323,"f1c":0.9999,"f1a":0.9153,"tprc":0.9998,"tpra":0.8418,"fprc":0.0,"fpra":0.0239,"aucc":1.0,"auca":0.997,"apc":1.0,"apa":0.9617,"f1d":0.0846,"aucd":0.003,"sev":"HIGH","l2":0.8797,"pctu":0.0,"pctfooled":0.0753,"pctpred":0.0754},"detection":{"ac":0.9997,"aa":0.8507,"ad":0.149,"ev":0.4261,"prc":0.9997,"pra":0.8618,"f1c":0.9997,"f1a":0.8473,"tprc":0.9993,"tpra":0.5732,"fprc":0.0,"fpra":0.0155,"aucc":1.0,"auca":0.9952,"apc":1.0,"apa":0.6678,"f1d":0.1524,"aucd":0.0048,"sev":"CRITICAL","l2":0.8809,"pctu":0.0,"pctfooled":0.1489,"pctpred":0.1489},"siem":{"ac":0.9558,"aa":0.8882,"ad":0.0676,"ev":0.1153,"prc":0.9732,"pra":0.9135,"f1c":0.9427,"f1a":0.8736,"tprc":0.8987,"tpra":0.7834,"fprc":0.0053,"fpra":0.0163,"aucc":1.0,"auca":0.9971,"apc":1.0,"apa":0.9396,"f1d":0.0691,"aucd":0.0029,"sev":"HIGH","l2":0.8806,"pctu":0.0,"pctfooled":0.0962,"pctpred":0.1301},"soar":{"ac":0.9844,"aa":0.9152,"ad":0.0692,"ev":0.1677,"prc":0.987,"pra":0.9322,"f1c":0.9842,"f1a":0.8949,"tprc":0.9554,"tpra":0.7877,"fprc":0.0034,"fpra":0.0211,"aucc":1.0,"auca":0.9979,"apc":1.0,"apa":0.9868,"f1d":0.0893,"aucd":0.0021,"sev":"HIGH","l2":0.8801,"pctu":0.0,"pctfooled":0.0759,"pctpred":0.0824}},"FGSM \u03b5=0.20":{"ingestion":{"ac":0.9557,"aa":0.8166,"ad":0.1391,"ev":0.292,"prc":0.9732,"pra":0.8438,"f1c":0.9424,"f1a":0.7969,"tprc":0.8983,"tpra":0.6063,"fprc":0.0053,"fpra":0.0257,"aucc":1.0,"auca":0.9932,"apc":1.0,"apa":0.7892,"f1d":0.1455,"aucd":0.0068,"sev":"CRITICAL","l2":1.7607,"pctu":0.0,"pctfooled":0.1558,"pctpred":0.1799},"triage":{"ac":0.9999,"aa":0.8789,"ad":0.121,"ev":0.2448,"prc":0.9999,"pra":0.8764,"f1c":0.9999,"f1a":0.8587,"tprc":0.9998,"tpra":0.755,"fprc":0.0,"fpra":0.0387,"aucc":1.0,"auca":0.9897,"apc":1.0,"apa":0.8818,"f1d":0.1412,"aucd":0.0103,"sev":"CRITICAL","l2":1.7595,"pctu":0.0,"pctfooled":0.1211,"pctpred":0.1211},"detection":{"ac":0.9997,"aa":0.7419,"ad":0.2578,"ev":0.6392,"prc":0.9997,"pra":0.7455,"f1c":0.9997,"f1a":0.7378,"tprc":0.9993,"tpra":0.3601,"fprc":0.0,"fpra":0.0271,"aucc":1.0,"auca":0.9823,"apc":1.0,"apa":0.4396,"f1d":0.2619,"aucd":0.0177,"sev":"CRITICAL","l2":1.7618,"pctu":0.0,"pctfooled":0.2578,"pctpred":0.258},"siem":{"ac":0.9558,"aa":0.815,"ad":0.1408,"ev":0.285,"prc":0.9732,"pra":0.847,"f1c":0.9427,"f1a":0.7943,"tprc":0.8987,"tpra":0.6137,"fprc":0.0053,"fpra":0.0266,"aucc":1.0,"auca":0.9932,"apc":1.0,"apa":0.8036,"f1d":0.1484,"aucd":0.0068,"sev":"CRITICAL","l2":1.7612,"pctu":0.0,"pctfooled":0.1563,"pctpred":0.1791},"soar":{"ac":0.9844,"aa":0.8876,"ad":0.0968,"ev":0.2366,"prc":0.987,"pra":0.9068,"f1c":0.9842,"f1a":0.8635,"tprc":0.9554,"tpra":0.7188,"fprc":0.0034,"fpra":0.0281,"aucc":1.0,"auca":0.9903,"apc":1.0,"apa":0.8926,"f1d":0.1207,"aucd":0.0097,"sev":"CRITICAL","l2":1.7602,"pctu":0.0,"pctfooled":0.1038,"pctpred":0.1107}},"FGSM \u03b5=0.30":{"ingestion":{"ac":0.9557,"aa":0.7838,"ad":0.1719,"ev":0.3564,"prc":0.9732,"pra":0.7952,"f1c":0.9424,"f1a":0.7614,"tprc":0.8983,"tpra":0.5419,"fprc":0.0053,"fpra":0.0311,"aucc":1.0,"auca":0.9881,"apc":1.0,"apa":0.6692,"f1d":0.181,"aucd":0.0119,"sev":"CRITICAL","l2":2.6411,"pctu":0.0,"pctfooled":0.1856,"pctpred":0.2069},"triage":{"ac":0.9999,"aa":0.8286,"ad":0.1713,"ev":0.3254,"prc":0.9999,"pra":0.8152,"f1c":0.9999,"f1a":0.8093,"tprc":0.9998,"tpra":0.6744,"fprc":0.0,"fpra":0.0544,"aucc":1.0,"auca":0.9699,"apc":1.0,"apa":0.7484,"f1d":0.1906,"aucd":0.0301,"sev":"CRITICAL","l2":2.6392,"pctu":0.0,"pctfooled":0.1713,"pctpred":0.1713},"detection":{"ac":0.9997,"aa":0.722,"ad":0.2777,"ev":0.6788,"prc":0.9997,"pra":0.7319,"f1c":0.9997,"f1a":0.7234,"tprc":0.9993,"tpra":0.3205,"fprc":0.0,"fpra":0.0292,"aucc":1.0,"auca":0.9737,"apc":1.0,"apa":0.3836,"f1d":0.2763,"aucd":0.0263,"sev":"CRITICAL","l2":2.6426,"pctu":0.0,"pctfooled":0.2777,"pctpred":0.2779},"siem":{"ac":0.9558,"aa":0.7751,"ad":0.1807,"ev":0.3728,"prc":0.9732,"pra":0.7853,"f1c":0.9427,"f1a":0.7521,"tprc":0.8987,"tpra":0.5259,"fprc":0.0053,"fpra":0.0319,"aucc":1.0,"auca":0.9872,"apc":1.0,"apa":0.6613,"f1d":0.1906,"aucd":0.0128,"sev":"CRITICAL","l2":2.6418,"pctu":0.0,"pctfooled":0.1938,"pctpred":0.2149},"soar":{"ac":0.9844,"aa":0.8456,"ad":0.1388,"ev":0.3359,"prc":0.987,"pra":0.8561,"f1c":0.9842,"f1a":0.8212,"tprc":0.9554,"tpra":0.6195,"fprc":0.0034,"fpra":0.0389,"aucc":1.0,"auca":0.9706,"apc":1.0,"apa":0.7063,"f1d":0.163,"aucd":0.0294,"sev":"CRITICAL","l2":2.6402,"pctu":0.0,"pctfooled":0.146,"pctpred":0.1532}},"PGD  \u03b5=0.01":{"ingestion":{"ac":0.9557,"aa":0.9916,"ad":-0.0359,"ev":0.0,"prc":0.9732,"pra":0.9924,"f1c":0.9424,"f1a":0.9914,"tprc":0.8983,"tpra":0.9807,"fprc":0.0053,"fpra":0.001,"aucc":1.0,"auca":1.0,"apc":1.0,"apa":0.9999,"f1d":-0.049,"aucd":0.0,"sev":"LOW","l2":0.0884,"pctu":0.0,"pctfooled":0.0004,"pctpred":0.0366},"triage":{"ac":0.9999,"aa":0.9997,"ad":0.0002,"ev":0.0005,"prc":0.9999,"pra":0.9997,"f1c":0.9999,"f1a":0.9997,"tprc":0.9998,"tpra":0.9993,"fprc":0.0,"fpra":0.0001,"aucc":1.0,"auca":1.0,"apc":1.0,"apa":1.0,"f1d":0.0002,"aucd":0.0,"sev":"LOW","l2":0.0883,"pctu":0.0,"pctfooled":0.0003,"pctpred":0.0003},"detection":{"ac":0.9997,"aa":0.9991,"ad":0.0006,"ev":0.0016,"prc":0.9997,"pra":0.9991,"f1c":0.9997,"f1a":0.9991,"tprc":0.9993,"tpra":0.9977,"fprc":0.0,"fpra":0.0001,"aucc":1.0,"auca":1.0,"apc":1.0,"apa":0.9999,"f1d":0.0006,"aucd":0.0,"sev":"LOW","l2":0.0884,"pctu":0.0,"pctfooled":0.0006,"pctpred":0.0006},"siem":{"ac":0.9558,"aa":0.9906,"ad":-0.0348,"ev":0.0,"prc":0.9732,"pra":0.9914,"f1c":0.9427,"f1a":0.9904,"tprc":0.8987,"tpra":0.9787,"fprc":0.0053,"fpra":0.0011,"aucc":1.0,"auca":1.0,"apc":1.0,"apa":0.9985,"f1d":-0.0477,"aucd":0.0,"sev":"LOW","l2":0.0884,"pctu":0.0,"pctfooled":0.0007,"pctpred":0.0365},"soar":{"ac":0.9844,"aa":0.99,"ad":-0.0056,"ev":0.0,"prc":0.987,"pra":0.9911,"f1c":0.9842,"f1a":0.99,"tprc":0.9554,"tpra":0.9729,"fprc":0.0034,"fpra":0.0022,"aucc":1.0,"auca":1.0,"apc":1.0,"apa":0.9999,"f1d":-0.0058,"aucd":0.0,"sev":"LOW","l2":0.0883,"pctu":0.0,"pctfooled":0.001,"pctpred":0.0075}},"PGD  \u03b5=0.05":{"ingestion":{"ac":0.9557,"aa":0.9187,"ad":0.037,"ev":0.0447,"prc":0.9732,"pra":0.9378,"f1c":0.9424,"f1a":0.914,"tprc":0.8983,"tpra":0.8536,"fprc":0.0053,"fpra":0.0103,"aucc":1.0,"auca":0.9976,"apc":1.0,"apa":0.9583,"f1d":0.0284,"aucd":0.0024,"sev":"HIGH","l2":0.44,"pctu":0.0,"pctfooled":0.0659,"pctpred":0.1007},"triage":{"ac":0.9999,"aa":0.9492,"ad":0.0507,"ev":0.1067,"prc":0.9999,"pra":0.9554,"f1c":0.9999,"f1a":0.9461,"tprc":0.9998,"tpra":0.8931,"fprc":0.0,"fpra":0.0158,"aucc":1.0,"auca":0.9984,"apc":1.0,"apa":0.9788,"f1d":0.0538,"aucd":0.0016,"sev":"HIGH","l2":0.4396,"pctu":0.0,"pctfooled":0.0508,"pctpred":0.0508},"detection":{"ac":0.9997,"aa":0.9649,"ad":0.0348,"ev":0.1014,"prc":0.9997,"pra":0.9667,"f1c":0.9997,"f1a":0.9646,"tprc":0.9993,"tpra":0.8979,"fprc":0.0,"fpra":0.0036,"aucc":1.0,"auca":0.9993,"apc":1.0,"apa":0.9268,"f1d":0.0351,"aucd":0.0007,"sev":"HIGH","l2":0.4402,"pctu":0.0,"pctfooled":0.0347,"pctpred":0.0347},"siem":{"ac":0.9558,"aa":0.9206,"ad":0.0352,"ev":0.0424,"prc":0.9732,"pra":0.9393,"f1c":0.9427,"f1a":0.9165,"tprc":0.8987,"tpra":0.8563,"fprc":0.0053,"fpra":0.0103,"aucc":1.0,"auca":0.9975,"apc":1.0,"apa":0.9583,"f1d":0.0262,"aucd":0.0025,"sev":"HIGH","l2":0.4401,"pctu":0.0,"pctfooled":0.0648,"pctpred":0.0995},"soar":{"ac":0.9844,"aa":0.9281,"ad":0.0563,"ev":0.1371,"prc":0.987,"pra":0.9417,"f1c":0.9842,"f1a":0.9148,"tprc":0.9554,"tpra":0.8183,"fprc":0.0034,"fpra":0.0178,"aucc":1.0,"auca":0.999,"apc":1.0,"apa":0.9951,"f1d":0.0694,"aucd":0.001,"sev":"HIGH","l2":0.4398,"pctu":0.0,"pctfooled":0.0624,"pctpred":0.0684}},"PGD  \u03b5=0.10":{"ingestion":{"ac":0.9557,"aa":0.8992,"ad":0.0565,"ev":0.1016,"prc":0.9732,"pra":0.924,"f1c":0.9424,"f1a":0.8873,"tprc":0.8983,"tpra":0.7967,"fprc":0.0053,"fpra":0.0131,"aucc":1.0,"auca":0.9974,"apc":1.0,"apa":0.941,"f1d":0.0551,"aucd":0.0026,"sev":"HIGH","l2":0.8769,"pctu":0.0,"pctfooled":0.0809,"pctpred":0.1134},"triage":{"ac":0.9999,"aa":0.9221,"ad":0.0778,"ev":0.1629,"prc":0.9999,"pra":0.9283,"f1c":0.9999,"f1a":0.9125,"tprc":0.9998,"tpra":0.8369,"fprc":0.0,"fpra":0.0241,"aucc":1.0,"auca":0.9968,"apc":1.0,"apa":0.9585,"f1d":0.0874,"aucd":0.0032,"sev":"HIGH","l2":0.8763,"pctu":0.0,"pctfooled":0.0779,"pctpred":0.078},"detection":{"ac":0.9997,"aa":0.8344,"ad":0.1653,"ev":0.4621,"prc":0.9997,"pra":0.8448,"f1c":0.9997,"f1a":0.8291,"tprc":0.9993,"tpra":0.5372,"fprc":0.0,"fpra":0.0172,"aucc":1.0,"auca":0.9942,"apc":1.0,"apa":0.6216,"f1d":0.1706,"aucd":0.0058,"sev":"CRITICAL","l2":0.8774,"pctu":0.0,"pctfooled":0.1653,"pctpred":0.1653},"siem":{"ac":0.9558,"aa":0.891,"ad":0.0648,"ev":0.1089,"prc":0.9732,"pra":0.9182,"f1c":0.9427,"f1a":0.8759,"tprc":0.8987,"tpra":0.7898,"fprc":0.0053,"fpra":0.015,"aucc":1.0,"auca":0.9972,"apc":1.0,"apa":0.9428,"f1d":0.0668,"aucd":0.0028,"sev":"HIGH","l2":0.8771,"pctu":0.0,"pctfooled":0.0902,"pctpred":0.1228},"soar":{"ac":0.9844,"aa":0.9131,"ad":0.0713,"ev":0.1715,"prc":0.987,"pra":0.9308,"f1c":0.9842,"f1a":0.8926,"tprc":0.9554,"tpra":0.7839,"fprc":0.0034,"fpra":0.0215,"aucc":1.0,"auca":0.998,"apc":1.0,"apa":0.9864,"f1d":0.0916,"aucd":0.002,"sev":"HIGH","l2":0.8766,"pctu":0.0,"pctfooled":0.0771,"pctpred":0.0829}},"PGD  \u03b5=0.20":{"ingestion":{"ac":0.9557,"aa":0.8217,"ad":0.134,"ev":0.289,"prc":0.9732,"pra":0.8526,"f1c":0.9424,"f1a":0.8029,"tprc":0.8983,"tpra":0.6093,"fprc":0.0053,"fpra":0.0235,"aucc":1.0,"auca":0.9934,"apc":1.0,"apa":0.7941,"f1d":0.1395,"aucd":0.0066,"sev":"CRITICAL","l2":1.743,"pctu":0.0,"pctfooled":0.1476,"pctpred":0.1677},"triage":{"ac":0.9999,"aa":0.8806,"ad":0.1193,"ev":0.2407,"prc":0.9999,"pra":0.8813,"f1c":0.9999,"f1a":0.8622,"tprc":0.9998,"tpra":0.7591,"fprc":0.0,"fpra":0.0366,"aucc":1.0,"auca":0.9899,"apc":1.0,"apa":0.8842,"f1d":0.1377,"aucd":0.0101,"sev":"CRITICAL","l2":1.7418,"pctu":0.0,"pctfooled":0.1194,"pctpred":0.1195},"detection":{"ac":0.9997,"aa":0.7008,"ad":0.2989,"ev":0.7311,"prc":0.9997,"pra":0.7086,"f1c":0.9997,"f1a":0.7027,"tprc":0.9993,"tpra":0.2682,"fprc":0.0,"fpra":0.0319,"aucc":1.0,"auca":0.9805,"apc":1.0,"apa":0.423,"f1d":0.297,"aucd":0.0195,"sev":"CRITICAL","l2":1.744,"pctu":0.0,"pctfooled":0.2989,"pctpred":0.2989},"siem":{"ac":0.9558,"aa":0.8248,"ad":0.131,"ev":0.2724,"prc":0.9732,"pra":0.8585,"f1c":0.9427,"f1a":0.8062,"tprc":0.8987,"tpra":0.6263,"fprc":0.0053,"fpra":0.0233,"aucc":1.0,"auca":0.9936,"apc":1.0,"apa":0.8141,"f1d":0.1365,"aucd":0.0064,"sev":"CRITICAL","l2":1.7435,"pctu":0.0,"pctfooled":0.1449,"pctpred":0.1654},"soar":{"ac":0.9844,"aa":0.8891,"ad":0.0953,"ev":0.2326,"prc":0.987,"pra":0.9092,"f1c":0.9842,"f1a":0.8662,"tprc":0.9554,"tpra":0.7228,"fprc":0.0034,"fpra":0.0274,"aucc":1.0,"auca":0.9905,"apc":1.0,"apa":0.8903,"f1d":0.118,"aucd":0.0095,"sev":"CRITICAL","l2":1.7425,"pctu":0.0,"pctfooled":0.1014,"pctpred":0.1075}},"PGD  \u03b5=0.30":{"ingestion":{"ac":0.9557,"aa":0.7841,"ad":0.1716,"ev":0.3566,"prc":0.9732,"pra":0.8008,"f1c":0.9424,"f1a":0.7619,"tprc":0.8983,"tpra":0.5417,"fprc":0.0053,"fpra":0.0294,"aucc":1.0,"auca":0.9877,"apc":1.0,"apa":0.6598,"f1d":0.1805,"aucd":0.0123,"sev":"CRITICAL","l2":2.6098,"pctu":0.0,"pctfooled":0.1825,"pctpred":0.1992},"triage":{"ac":0.9999,"aa":0.8281,"ad":0.1718,"ev":0.3225,"prc":0.9999,"pra":0.8194,"f1c":0.9999,"f1a":0.8104,"tprc":0.9998,"tpra":0.6773,"fprc":0.0,"fpra":0.0526,"aucc":1.0,"auca":0.9693,"apc":1.0,"apa":0.7455,"f1d":0.1895,"aucd":0.0307,"sev":"CRITICAL","l2":2.6079,"pctu":0.0,"pctfooled":0.1719,"pctpred":0.1719},"detection":{"ac":0.9997,"aa":0.6513,"ad":0.3484,"ev":0.7934,"prc":0.9997,"pra":0.6542,"f1c":0.9997,"f1a":0.6506,"tprc":0.9993,"tpra":0.2059,"fprc":0.0,"fpra":0.0395,"aucc":1.0,"auca":0.9627,"apc":1.0,"apa":0.3417,"f1d":0.3491,"aucd":0.0373,"sev":"CRITICAL","l2":2.6113,"pctu":0.0,"pctfooled":0.3484,"pctpred":0.3485},"siem":{"ac":0.9558,"aa":0.7823,"ad":0.1735,"ev":0.3583,"prc":0.9732,"pra":0.7964,"f1c":0.9427,"f1a":0.7601,"tprc":0.8987,"tpra":0.5404,"fprc":0.0053,"fpra":0.0294,"aucc":1.0,"auca":0.9872,"apc":1.0,"apa":0.6539,"f1d":0.1826,"aucd":0.0128,"sev":"CRITICAL","l2":2.6105,"pctu":0.0,"pctfooled":0.1854,"pctpred":0.2027},"soar":{"ac":0.9844,"aa":0.8457,"ad":0.1387,"ev":0.3339,"prc":0.987,"pra":0.8609,"f1c":0.9842,"f1a":0.8224,"tprc":0.9554,"tpra":0.6215,"fprc":0.0034,"fpra":0.0382,"aucc":1.0,"auca":0.9702,"apc":1.0,"apa":0.7048,"f1d":0.1618,"aucd":0.0298,"sev":"CRITICAL","l2":2.6089,"pctu":0.0,"pctfooled":0.1452,"pctpred":0.1517}},"MI-FGSM \u03b5=0.10":{"ingestion":{"ac":0.9557,"aa":0.8975,"ad":0.0582,"ev":0.1044,"prc":0.9732,"pra":0.9217,"f1c":0.9424,"f1a":0.8851,"tprc":0.8983,"tpra":0.7939,"fprc":0.0053,"fpra":0.0137,"aucc":1.0,"auca":0.9973,"apc":1.0,"apa":0.9384,"f1d":0.0573,"aucd":0.0027,"sev":"HIGH","l2":0.8629,"pctu":0.0,"pctfooled":0.0861,"pctpred":0.1208},"triage":{"ac":0.9999,"aa":0.9244,"ad":0.0755,"ev":0.1582,"prc":0.9999,"pra":0.9313,"f1c":0.9999,"f1a":0.9153,"tprc":0.9998,"tpra":0.8416,"fprc":0.0,"fpra":0.0238,"aucc":1.0,"auca":0.997,"apc":1.0,"apa":0.9616,"f1d":0.0846,"aucd":0.003,"sev":"HIGH","l2":0.8623,"pctu":0.0,"pctfooled":0.0756,"pctpred":0.0757},"detection":{"ac":0.9997,"aa":0.8406,"ad":0.1591,"ev":0.4485,"prc":0.9997,"pra":0.8526,"f1c":0.9997,"f1a":0.8362,"tprc":0.9993,"tpra":0.5508,"fprc":0.0,"fpra":0.0166,"aucc":1.0,"auca":0.9947,"apc":1.0,"apa":0.6522,"f1d":0.1635,"aucd":0.0053,"sev":"CRITICAL","l2":0.8634,"pctu":0.0,"pctfooled":0.159,"pctpred":0.159},"siem":{"ac":0.9558,"aa":0.8884,"ad":0.0674,"ev":0.1144,"prc":0.9732,"pra":0.9143,"f1c":0.9427,"f1a":0.8736,"tprc":0.8987,"tpra":0.7843,"fprc":0.0053,"fpra":0.0158,"aucc":1.0,"auca":0.9971,"apc":1.0,"apa":0.939,"f1d":0.0691,"aucd":0.0029,"sev":"HIGH","l2":0.8632,"pctu":0.0,"pctfooled":0.0948,"pctpred":0.1284},"soar":{"ac":0.9844,"aa":0.9152,"ad":0.0692,"ev":0.1669,"prc":0.987,"pra":0.9322,"f1c":0.9842,"f1a":0.8954,"tprc":0.9554,"tpra":0.7885,"fprc":0.0034,"fpra":0.0211,"aucc":1.0,"auca":0.998,"apc":1.0,"apa":0.9872,"f1d":0.0888,"aucd":0.002,"sev":"HIGH","l2":0.8627,"pctu":0.0,"pctfooled":0.0758,"pctpred":0.0824}},"MI-FGSM \u03b5=0.20":{"ingestion":{"ac":0.9557,"aa":0.8186,"ad":0.1371,"ev":0.2913,"prc":0.9732,"pra":0.8475,"f1c":0.9424,"f1a":0.7997,"tprc":0.8983,"tpra":0.607,"fprc":0.0053,"fpra":0.0249,"aucc":1.0,"auca":0.9934,"apc":1.0,"apa":0.7941,"f1d":0.1427,"aucd":0.0066,"sev":"CRITICAL","l2":1.7129,"pctu":0.0,"pctfooled":0.1516,"pctpred":0.1744},"triage":{"ac":0.9999,"aa":0.8782,"ad":0.1217,"ev":0.2459,"prc":0.9999,"pra":0.8755,"f1c":0.9999,"f1a":0.8582,"tprc":0.9998,"tpra":0.7539,"fprc":0.0,"fpra":0.0385,"aucc":1.0,"auca":0.99,"apc":1.0,"apa":0.8849,"f1d":0.1417,"aucd":0.01,"sev":"CRITICAL","l2":1.7117,"pctu":0.0,"pctfooled":0.1218,"pctpred":0.1218},"detection":{"ac":0.9997,"aa":0.7221,"ad":0.2776,"ev":0.6824,"prc":0.9997,"pra":0.7235,"f1c":0.9997,"f1a":0.7204,"tprc":0.9993,"tpra":0.3169,"fprc":0.0,"fpra":0.0292,"aucc":1.0,"auca":0.9803,"apc":1.0,"apa":0.4234,"f1d":0.2793,"aucd":0.0197,"sev":"CRITICAL","l2":1.7139,"pctu":0.0,"pctfooled":0.2775,"pctpred":0.2777},"siem":{"ac":0.9558,"aa":0.8171,"ad":0.1387,"ev":0.2824,"prc":0.9732,"pra":0.8504,"f1c":0.9427,"f1a":0.7965,"tprc":0.8987,"tpra":0.6163,"fprc":0.0053,"fpra":0.0257,"aucc":1.0,"auca":0.9934,"apc":1.0,"apa":0.8085,"f1d":0.1462,"aucd":0.0066,"sev":"CRITICAL","l2":1.7134,"pctu":0.0,"pctfooled":0.1531,"pctpred":0.1754},"soar":{"ac":0.9844,"aa":0.888,"ad":0.0964,"ev":0.2354,"prc":0.987,"pra":0.9075,"f1c":0.9842,"f1a":0.8646,"tprc":0.9554,"tpra":0.72,"fprc":0.0034,"fpra":0.0279,"aucc":1.0,"auca":0.9907,"apc":1.0,"apa":0.8955,"f1d":0.1196,"aucd":0.0093,"sev":"CRITICAL","l2":1.7124,"pctu":0.0,"pctfooled":0.1032,"pctpred":0.1099}},"MI-FGSM \u03b5=0.30":{"ingestion":{"ac":0.9557,"aa":0.7888,"ad":0.1669,"ev":0.3493,"prc":0.9732,"pra":0.8064,"f1c":0.9424,"f1a":0.7674,"tprc":0.8983,"tpra":0.549,"fprc":0.0053,"fpra":0.0297,"aucc":1.0,"auca":0.9889,"apc":1.0,"apa":0.6825,"f1d":0.175,"aucd":0.0111,"sev":"CRITICAL","l2":2.5538,"pctu":0.0,"pctfooled":0.1787,"pctpred":0.199},"triage":{"ac":0.9999,"aa":0.8325,"ad":0.1674,"ev":0.3196,"prc":0.9999,"pra":0.82,"f1c":0.9999,"f1a":0.8134,"tprc":0.9998,"tpra":0.6802,"fprc":0.0,"fpra":0.0528,"aucc":1.0,"auca":0.971,"apc":1.0,"apa":0.7562,"f1d":0.1865,"aucd":0.029,"sev":"CRITICAL","l2":2.5519,"pctu":0.0,"pctfooled":0.1674,"pctpred":0.1674},"detection":{"ac":0.9997,"aa":0.6935,"ad":0.3062,"ev":0.7371,"prc":0.9997,"pra":0.7065,"f1c":0.9997,"f1a":0.6986,"tprc":0.9993,"tpra":0.2622,"fprc":0.0,"fpra":0.0327,"aucc":1.0,"auca":0.97,"apc":1.0,"apa":0.3669,"f1d":0.3011,"aucd":0.03,"sev":"CRITICAL","l2":2.5553,"pctu":0.0,"pctfooled":0.3062,"pctpred":0.3064},"siem":{"ac":0.9558,"aa":0.7783,"ad":0.1775,"ev":0.3667,"prc":0.9732,"pra":0.7931,"f1c":0.9427,"f1a":0.7547,"tprc":0.8987,"tpra":0.532,"fprc":0.0053,"fpra":0.031,"aucc":1.0,"auca":0.9879,"apc":1.0,"apa":0.6744,"f1d":0.188,"aucd":0.0121,"sev":"CRITICAL","l2":2.5545,"pctu":0.0,"pctfooled":0.1895,"pctpred":0.2105},"soar":{"ac":0.9844,"aa":0.847,"ad":0.1374,"ev":0.3321,"prc":0.987,"pra":0.8616,"f1c":0.9842,"f1a":0.8234,"tprc":0.9554,"tpra":0.6233,"fprc":0.0034,"fpra":0.0383,"aucc":1.0,"auca":0.9712,"apc":1.0,"apa":0.716,"f1d":0.1608,"aucd":0.0288,"sev":"CRITICAL","l2":2.5529,"pctu":0.0,"pctfooled":0.144,"pctpred":0.1507}},"C&W L2  c=0.5":{"ingestion":{"ac":0.9557,"aa":0.7133,"ad":0.2424,"ev":0.5137,"prc":0.9732,"pra":0.68,"f1c":0.9424,"f1a":0.6804,"tprc":0.8983,"tpra":0.3846,"fprc":0.0053,"fpra":0.0443,"aucc":1.0,"auca":0.96,"apc":1.0,"apa":0.4374,"f1d":0.262,"aucd":0.04,"sev":"CRITICAL","l2":4.4005,"pctu":0.0,"pctfooled":0.2509,"pctpred":0.2707},"triage":{"ac":0.9999,"aa":0.7621,"ad":0.2378,"ev":0.4167,"prc":0.9999,"pra":0.7331,"f1c":0.9999,"f1a":0.7427,"tprc":0.9998,"tpra":0.5831,"fprc":0.0,"fpra":0.081,"aucc":1.0,"auca":0.9198,"apc":1.0,"apa":0.6002,"f1d":0.2572,"aucd":0.0802,"sev":"CRITICAL","l2":4.3973,"pctu":0.0,"pctfooled":0.2379,"pctpred":0.2379},"detection":{"ac":0.9997,"aa":0.6852,"ad":0.3145,"ev":0.7469,"prc":0.9997,"pra":0.7039,"f1c":0.9997,"f1a":0.6916,"tprc":0.9993,"tpra":0.2524,"fprc":0.0,"fpra":0.0343,"aucc":1.0,"auca":0.9595,"apc":1.0,"apa":0.3352,"f1d":0.3081,"aucd":0.0405,"sev":"CRITICAL","l2":4.403,"pctu":0.0,"pctfooled":0.3145,"pctpred":0.3147},"siem":{"ac":0.9558,"aa":0.71,"ad":0.2458,"ev":0.5249,"prc":0.9732,"pra":0.6752,"f1c":0.9427,"f1a":0.6776,"tprc":0.8987,"tpra":0.3738,"fprc":0.0053,"fpra":0.0438,"aucc":1.0,"auca":0.9559,"apc":1.0,"apa":0.4312,"f1d":0.2651,"aucd":0.0441,"sev":"CRITICAL","l2":4.4016,"pctu":0.0,"pctfooled":0.2529,"pctpred":0.2716},"soar":{"ac":0.9844,"aa":0.7519,"ad":0.2325,"ev":0.4727,"prc":0.987,"pra":0.7167,"f1c":0.9842,"f1a":0.7136,"tprc":0.9554,"tpra":0.4827,"fprc":0.0034,"fpra":0.0789,"aucc":1.0,"auca":0.917,"apc":1.0,"apa":0.5367,"f1d":0.2706,"aucd":0.083,"sev":"CRITICAL","l2":4.399,"pctu":0.0,"pctfooled":0.2429,"pctpred":0.2532}},"C&W L2  c=1.0":{"ingestion":{"ac":0.9557,"aa":0.7133,"ad":0.2424,"ev":0.5137,"prc":0.9732,"pra":0.68,"f1c":0.9424,"f1a":0.6804,"tprc":0.8983,"tpra":0.3846,"fprc":0.0053,"fpra":0.0443,"aucc":1.0,"auca":0.96,"apc":1.0,"apa":0.4374,"f1d":0.262,"aucd":0.04,"sev":"CRITICAL","l2":4.4037,"pctu":0.0,"pctfooled":0.2509,"pctpred":0.2707},"triage":{"ac":0.9999,"aa":0.7621,"ad":0.2378,"ev":0.4167,"prc":0.9999,"pra":0.7331,"f1c":0.9999,"f1a":0.7427,"tprc":0.9998,"tpra":0.5831,"fprc":0.0,"fpra":0.081,"aucc":1.0,"auca":0.9198,"apc":1.0,"apa":0.6002,"f1d":0.2572,"aucd":0.0802,"sev":"CRITICAL","l2":4.4005,"pctu":0.0,"pctfooled":0.2379,"pctpred":0.2379},"detection":{"ac":0.9997,"aa":0.6852,"ad":0.3145,"ev":0.7469,"prc":0.9997,"pra":0.7039,"f1c":0.9997,"f1a":0.6916,"tprc":0.9993,"tpra":0.2524,"fprc":0.0,"fpra":0.0343,"aucc":1.0,"auca":0.9595,"apc":1.0,"apa":0.3352,"f1d":0.3081,"aucd":0.0405,"sev":"CRITICAL","l2":4.4062,"pctu":0.0,"pctfooled":0.3145,"pctpred":0.3147},"siem":{"ac":0.9558,"aa":0.71,"ad":0.2458,"ev":0.5249,"prc":0.9732,"pra":0.6752,"f1c":0.9427,"f1a":0.6776,"tprc":0.8987,"tpra":0.3738,"fprc":0.0053,"fpra":0.0438,"aucc":1.0,"auca":0.9559,"apc":1.0,"apa":0.4312,"f1d":0.2651,"aucd":0.0441,"sev":"CRITICAL","l2":4.4048,"pctu":0.0,"pctfooled":0.2529,"pctpred":0.2716},"soar":{"ac":0.9844,"aa":0.7519,"ad":0.2325,"ev":0.4727,"prc":0.987,"pra":0.7167,"f1c":0.9842,"f1a":0.7136,"tprc":0.9554,"tpra":0.4827,"fprc":0.0034,"fpra":0.0789,"aucc":1.0,"auca":0.917,"apc":1.0,"apa":0.5367,"f1d":0.2706,"aucd":0.083,"sev":"CRITICAL","l2":4.4022,"pctu":0.0,"pctfooled":0.2429,"pctpred":0.2532}},"C&W L2  c=2.0":{"ingestion":{"ac":0.9557,"aa":0.7133,"ad":0.2424,"ev":0.5137,"prc":0.9732,"pra":0.68,"f1c":0.9424,"f1a":0.6804,"tprc":0.8983,"tpra":0.3846,"fprc":0.0053,"fpra":0.0443,"aucc":1.0,"auca":0.96,"apc":1.0,"apa":0.4374,"f1d":0.262,"aucd":0.04,"sev":"CRITICAL","l2":4.4037,"pctu":0.0,"pctfooled":0.2509,"pctpred":0.2707},"triage":{"ac":0.9999,"aa":0.7621,"ad":0.2378,"ev":0.4167,"prc":0.9999,"pra":0.7331,"f1c":0.9999,"f1a":0.7427,"tprc":0.9998,"tpra":0.5831,"fprc":0.0,"fpra":0.081,"aucc":1.0,"auca":0.9198,"apc":1.0,"apa":0.6002,"f1d":0.2572,"aucd":0.0802,"sev":"CRITICAL","l2":4.4005,"pctu":0.0,"pctfooled":0.2379,"pctpred":0.2379},"detection":{"ac":0.9997,"aa":0.6852,"ad":0.3145,"ev":0.7469,"prc":0.9997,"pra":0.7039,"f1c":0.9997,"f1a":0.6916,"tprc":0.9993,"tpra":0.2524,"fprc":0.0,"fpra":0.0343,"aucc":1.0,"auca":0.9595,"apc":1.0,"apa":0.3352,"f1d":0.3081,"aucd":0.0405,"sev":"CRITICAL","l2":4.4062,"pctu":0.0,"pctfooled":0.3145,"pctpred":0.3147},"siem":{"ac":0.9558,"aa":0.71,"ad":0.2458,"ev":0.5249,"prc":0.9732,"pra":0.6752,"f1c":0.9427,"f1a":0.6776,"tprc":0.8987,"tpra":0.3738,"fprc":0.0053,"fpra":0.0438,"aucc":1.0,"auca":0.9559,"apc":1.0,"apa":0.4312,"f1d":0.2651,"aucd":0.0441,"sev":"CRITICAL","l2":4.4048,"pctu":0.0,"pctfooled":0.2529,"pctpred":0.2716},"soar":{"ac":0.9844,"aa":0.7519,"ad":0.2325,"ev":0.4727,"prc":0.987,"pra":0.7167,"f1c":0.9842,"f1a":0.7136,"tprc":0.9554,"tpra":0.4827,"fprc":0.0034,"fpra":0.0789,"aucc":1.0,"auca":0.917,"apc":1.0,"apa":0.5367,"f1d":0.2706,"aucd":0.083,"sev":"CRITICAL","l2":4.4022,"pctu":0.0,"pctfooled":0.2429,"pctpred":0.2532}},"DeepFool os=0.02":{"ingestion":{"ac":0.9557,"aa":0.9254,"ad":0.0303,"ev":0.0605,"prc":0.9732,"pra":0.929,"f1c":0.9424,"f1a":0.9176,"tprc":0.8983,"tpra":0.8378,"fprc":0.0053,"fpra":0.0098,"aucc":1.0,"auca":0.9989,"apc":1.0,"apa":0.9616,"f1d":0.0248,"aucd":0.0011,"sev":"HIGH","l2":0.2436,"pctu":0.6353,"pctfooled":0.0366,"pctpred":0.0484},"triage":{"ac":0.9999,"aa":0.971,"ad":0.0289,"ev":0.0554,"prc":0.9999,"pra":0.9708,"f1c":0.9999,"f1a":0.9705,"tprc":0.9998,"tpra":0.9444,"fprc":0.0,"fpra":0.0105,"aucc":1.0,"auca":0.9992,"apc":1.0,"apa":0.9914,"f1d":0.0294,"aucd":0.0008,"sev":"MEDIUM","l2":0.2435,"pctu":0.6353,"pctfooled":0.0289,"pctpred":0.0289},"detection":{"ac":0.9997,"aa":0.7619,"ad":0.2378,"ev":0.6387,"prc":0.9997,"pra":0.767,"f1c":0.9997,"f1a":0.7526,"tprc":0.9993,"tpra":0.3606,"fprc":0.0,"fpra":0.0248,"aucc":1.0,"auca":0.9826,"apc":1.0,"apa":0.4788,"f1d":0.2471,"aucd":0.0174,"sev":"CRITICAL","l2":0.2438,"pctu":0.6352,"pctfooled":0.2378,"pctpred":0.2378},"siem":{"ac":0.9558,"aa":0.9215,"ad":0.0343,"ev":0.0662,"prc":0.9732,"pra":0.9264,"f1c":0.9427,"f1a":0.9149,"tprc":0.8987,"tpra":0.8325,"fprc":0.0053,"fpra":0.0105,"aucc":1.0,"auca":0.9988,"apc":1.0,"apa":0.9582,"f1d":0.0278,"aucd":0.0012,"sev":"HIGH","l2":0.2437,"pctu":0.6352,"pctfooled":0.0423,"pctpred":0.0553},"soar":{"ac":0.9844,"aa":0.9505,"ad":0.0339,"ev":0.0705,"prc":0.987,"pra":0.9514,"f1c":0.9842,"f1a":0.9495,"tprc":0.9554,"tpra":0.8849,"fprc":0.0034,"fpra":0.015,"aucc":1.0,"auca":0.9992,"apc":1.0,"apa":0.9856,"f1d":0.0347,"aucd":0.0008,"sev":"HIGH","l2":0.2436,"pctu":0.6353,"pctfooled":0.037,"pctpred":0.0401}},"DeepFool os=0.05":{"ingestion":{"ac":0.9557,"aa":0.9252,"ad":0.0305,"ev":0.0606,"prc":0.9732,"pra":0.9288,"f1c":0.9424,"f1a":0.9175,"tprc":0.8983,"tpra":0.8377,"fprc":0.0053,"fpra":0.0098,"aucc":1.0,"auca":0.9989,"apc":1.0,"apa":0.9609,"f1d":0.0249,"aucd":0.0011,"sev":"HIGH","l2":0.2505,"pctu":0.6349,"pctfooled":0.037,"pctpred":0.0489},"triage":{"ac":0.9999,"aa":0.9706,"ad":0.0293,"ev":0.0562,"prc":0.9999,"pra":0.9703,"f1c":0.9999,"f1a":0.97,"tprc":0.9998,"tpra":0.9436,"fprc":0.0,"fpra":0.0107,"aucc":1.0,"auca":0.9991,"apc":1.0,"apa":0.9911,"f1d":0.0299,"aucd":0.0009,"sev":"MEDIUM","l2":0.2503,"pctu":0.6349,"pctfooled":0.0294,"pctpred":0.0294},"detection":{"ac":0.9997,"aa":0.7607,"ad":0.239,"ev":0.6416,"prc":0.9997,"pra":0.766,"f1c":0.9997,"f1a":0.7517,"tprc":0.9993,"tpra":0.3577,"fprc":0.0,"fpra":0.025,"aucc":1.0,"auca":0.9819,"apc":1.0,"apa":0.4747,"f1d":0.248,"aucd":0.0181,"sev":"CRITICAL","l2":0.2506,"pctu":0.6349,"pctfooled":0.239,"pctpred":0.2391},"siem":{"ac":0.9558,"aa":0.9211,"ad":0.0347,"ev":0.0665,"prc":0.9732,"pra":0.9261,"f1c":0.9427,"f1a":0.9146,"tprc":0.8987,"tpra":0.8322,"fprc":0.0053,"fpra":0.0105,"aucc":1.0,"auca":0.9987,"apc":1.0,"apa":0.9578,"f1d":0.0281,"aucd":0.0013,"sev":"HIGH","l2":0.2505,"pctu":0.6349,"pctfooled":0.0426,"pctpred":0.0556},"soar":{"ac":0.9844,"aa":0.9496,"ad":0.0348,"ev":0.0715,"prc":0.987,"pra":0.9505,"f1c":0.9842,"f1a":0.9486,"tprc":0.9554,"tpra":0.8839,"fprc":0.0034,"fpra":0.0155,"aucc":1.0,"auca":0.9991,"apc":1.0,"apa":0.985,"f1d":0.0356,"aucd":0.0009,"sev":"HIGH","l2":0.2504,"pctu":0.6349,"pctfooled":0.0379,"pctpred":0.041}},"FEAT-zero":{"ingestion":{"ac":0.9557,"aa":0.5853,"ad":0.3704,"ev":0.5236,"prc":0.9732,"pra":0.639,"f1c":0.9424,"f1a":0.575,"tprc":0.8983,"tpra":0.3747,"fprc":0.0053,"fpra":0.0638,"aucc":1.0,"auca":0.8699,"apc":1.0,"apa":0.3949,"f1d":0.3674,"aucd":0.1301,"sev":"CRITICAL","l2":4.0201,"pctu":0.0,"pctfooled":0.3757,"pctpred":0.4177},"triage":{"ac":0.9999,"aa":0.6413,"ad":0.3586,"ev":0.5033,"prc":0.9999,"pra":0.6229,"f1c":0.9999,"f1a":0.6271,"tprc":0.9998,"tpra":0.4965,"fprc":0.0,"fpra":0.1326,"aucc":1.0,"auca":0.8277,"apc":1.0,"apa":0.4798,"f1d":0.3728,"aucd":0.1723,"sev":"CRITICAL","l2":4.0172,"pctu":0.0,"pctfooled":0.3587,"pctpred":0.3587},"detection":{"ac":0.9997,"aa":0.6936,"ad":0.3061,"ev":0.6979,"prc":0.9997,"pra":0.6883,"f1c":0.9997,"f1a":0.6334,"tprc":0.9993,"tpra":0.3014,"fprc":0.0,"fpra":0.0404,"aucc":1.0,"auca":0.9422,"apc":1.0,"apa":0.3756,"f1d":0.3663,"aucd":0.0578,"sev":"CRITICAL","l2":4.0224,"pctu":0.0,"pctfooled":0.3061,"pctpred":0.3063},"siem":{"ac":0.9558,"aa":0.58,"ad":0.3758,"ev":0.538,"prc":0.9732,"pra":0.6245,"f1c":0.9427,"f1a":0.5674,"tprc":0.8987,"tpra":0.3607,"fprc":0.0053,"fpra":0.0639,"aucc":1.0,"auca":0.867,"apc":1.0,"apa":0.3878,"f1d":0.3753,"aucd":0.133,"sev":"CRITICAL","l2":4.0211,"pctu":0.0,"pctfooled":0.3828,"pctpred":0.4256},"soar":{"ac":0.9844,"aa":0.6193,"ad":0.3651,"ev":0.4855,"prc":0.987,"pra":0.5762,"f1c":0.9842,"f1a":0.5966,"tprc":0.9554,"tpra":0.4699,"fprc":0.0034,"fpra":0.1263,"aucc":1.0,"auca":0.7921,"apc":1.0,"apa":0.5418,"f1d":0.3876,"aucd":0.2079,"sev":"CRITICAL","l2":4.0187,"pctu":0.0,"pctfooled":0.3754,"pctpred":0.3876}},"FEAT-scale":{"ingestion":{"ac":0.9557,"aa":0.5988,"ad":0.3569,"ev":0.5116,"prc":0.9732,"pra":0.6521,"f1c":0.9424,"f1a":0.5864,"tprc":0.8983,"tpra":0.3867,"fprc":0.0053,"fpra":0.062,"aucc":1.0,"auca":0.8804,"apc":1.0,"apa":0.4168,"f1d":0.356,"aucd":0.1196,"sev":"CRITICAL","l2":3.8191,"pctu":0.0,"pctfooled":0.3624,"pctpred":0.4042},"triage":{"ac":0.9999,"aa":0.6561,"ad":0.3438,"ev":0.4906,"prc":0.9999,"pra":0.6325,"f1c":0.9999,"f1a":0.6395,"tprc":0.9998,"tpra":0.5092,"fprc":0.0,"fpra":0.1278,"aucc":1.0,"auca":0.8372,"apc":1.0,"apa":0.4924,"f1d":0.3604,"aucd":0.1628,"sev":"CRITICAL","l2":3.8163,"pctu":0.0,"pctfooled":0.3439,"pctpred":0.3439},"detection":{"ac":0.9997,"aa":0.7274,"ad":0.2723,"ev":0.6522,"prc":0.9997,"pra":0.7346,"f1c":0.9997,"f1a":0.6753,"tprc":0.9993,"tpra":0.3471,"fprc":0.0,"fpra":0.0342,"aucc":1.0,"auca":0.9614,"apc":1.0,"apa":0.4568,"f1d":0.3244,"aucd":0.0386,"sev":"CRITICAL","l2":3.8213,"pctu":0.0,"pctfooled":0.2723,"pctpred":0.2725},"siem":{"ac":0.9558,"aa":0.5945,"ad":0.3613,"ev":0.525,"prc":0.9732,"pra":0.6445,"f1c":0.9427,"f1a":0.5797,"tprc":0.8987,"tpra":0.3737,"fprc":0.0053,"fpra":0.0619,"aucc":1.0,"auca":0.8778,"apc":1.0,"apa":0.4113,"f1d":0.363,"aucd":0.1222,"sev":"CRITICAL","l2":3.8201,"pctu":0.0,"pctfooled":0.3685,"pctpred":0.4111},"soar":{"ac":0.9844,"aa":0.6318,"ad":0.3526,"ev":0.4772,"prc":0.987,"pra":0.5849,"f1c":0.9842,"f1a":0.6071,"tprc":0.9554,"tpra":0.4782,"fprc":0.0034,"fpra":0.1234,"aucc":1.0,"auca":0.8046,"apc":1.0,"apa":0.5578,"f1d":0.3771,"aucd":0.1954,"sev":"CRITICAL","l2":3.8178,"pctu":0.0,"pctfooled":0.3628,"pctpred":0.375}},"FEAT-noise":{"ingestion":{"ac":0.9557,"aa":0.7552,"ad":0.2005,"ev":0.348,"prc":0.9732,"pra":0.7646,"f1c":0.9424,"f1a":0.7513,"tprc":0.8983,"tpra":0.5503,"fprc":0.0053,"fpra":0.0354,"aucc":1.0,"auca":0.9649,"apc":1.0,"apa":0.6125,"f1d":0.1911,"aucd":0.0351,"sev":"CRITICAL","l2":4.4112,"pctu":0.0,"pctfooled":0.2113,"pctpred":0.2379},"triage":{"ac":0.9999,"aa":0.7539,"ad":0.246,"ev":0.378,"prc":0.9999,"pra":0.7484,"f1c":0.9999,"f1a":0.7494,"tprc":0.9998,"tpra":0.6218,"fprc":0.0,"fpra":0.0875,"aucc":1.0,"auca":0.9413,"apc":1.0,"apa":0.6855,"f1d":0.2505,"aucd":0.0587,"sev":"CRITICAL","l2":4.4081,"pctu":0.0,"pctfooled":0.246,"pctpred":0.2461},"detection":{"ac":0.9997,"aa":0.824,"ad":0.1757,"ev":0.4394,"prc":0.9997,"pra":0.8288,"f1c":0.9997,"f1a":0.8224,"tprc":0.9993,"tpra":0.5599,"fprc":0.0,"fpra":0.0186,"aucc":1.0,"auca":0.9805,"apc":1.0,"apa":0.5428,"f1d":0.1773,"aucd":0.0195,"sev":"CRITICAL","l2":4.4138,"pctu":0.0,"pctfooled":0.1759,"pctpred":0.1762},"siem":{"ac":0.9558,"aa":0.7488,"ad":0.207,"ev":0.3546,"prc":0.9732,"pra":0.7611,"f1c":0.9427,"f1a":0.7437,"tprc":0.8987,"tpra":0.5441,"fprc":0.0053,"fpra":0.0366,"aucc":1.0,"auca":0.9629,"apc":1.0,"apa":0.6123,"f1d":0.199,"aucd":0.0371,"sev":"CRITICAL","l2":4.4124,"pctu":0.0,"pctfooled":0.2191,"pctpred":0.2445},"soar":{"ac":0.9844,"aa":0.7463,"ad":0.2381,"ev":0.3951,"prc":0.987,"pra":0.7482,"f1c":0.9842,"f1a":0.7229,"tprc":0.9554,"tpra":0.5603,"fprc":0.0034,"fpra":0.0866,"aucc":1.0,"auca":0.9322,"apc":1.0,"apa":0.7167,"f1d":0.2613,"aucd":0.0678,"sev":"CRITICAL","l2":4.4098,"pctu":0.0,"pctfooled":0.2461,"pctpred":0.2554}},"FEAT-swap":{"ingestion":{"ac":0.9557,"aa":0.7244,"ad":0.2313,"ev":0.3696,"prc":0.9732,"pra":0.753,"f1c":0.9424,"f1a":0.7025,"tprc":0.8983,"tpra":0.5287,"fprc":0.0053,"fpra":0.0432,"aucc":1.0,"auca":0.957,"apc":1.0,"apa":0.6474,"f1d":0.2399,"aucd":0.043,"sev":"CRITICAL","l2":6.1853,"pctu":0.0,"pctfooled":0.2413,"pctpred":0.2689},"triage":{"ac":0.9999,"aa":0.7289,"ad":0.271,"ev":0.4037,"prc":0.9999,"pra":0.7185,"f1c":0.9999,"f1a":0.7165,"tprc":0.9998,"tpra":0.5961,"fprc":0.0,"fpra":0.1004,"aucc":1.0,"auca":0.9223,"apc":1.0,"apa":0.6509,"f1d":0.2834,"aucd":0.0777,"sev":"CRITICAL","l2":6.1809,"pctu":0.0,"pctfooled":0.2711,"pctpred":0.2711},"detection":{"ac":0.9997,"aa":0.6484,"ad":0.3513,"ev":0.6781,"prc":0.9997,"pra":0.6606,"f1c":0.9997,"f1a":0.6147,"tprc":0.9993,"tpra":0.3212,"fprc":0.0,"fpra":0.0443,"aucc":1.0,"auca":0.9455,"apc":1.0,"apa":0.3686,"f1d":0.385,"aucd":0.0545,"sev":"CRITICAL","l2":6.1889,"pctu":0.0,"pctfooled":0.3514,"pctpred":0.3517},"siem":{"ac":0.9558,"aa":0.7183,"ad":0.2375,"ev":0.3693,"prc":0.9732,"pra":0.7534,"f1c":0.9427,"f1a":0.6955,"tprc":0.8987,"tpra":0.5294,"fprc":0.0053,"fpra":0.0441,"aucc":1.0,"auca":0.9549,"apc":1.0,"apa":0.6461,"f1d":0.2472,"aucd":0.0451,"sev":"CRITICAL","l2":6.1869,"pctu":0.0,"pctfooled":0.2487,"pctpred":0.276},"soar":{"ac":0.9844,"aa":0.7051,"ad":0.2793,"ev":0.4017,"prc":0.987,"pra":0.6537,"f1c":0.9842,"f1a":0.6764,"tprc":0.9554,"tpra":0.5537,"fprc":0.0034,"fpra":0.1019,"aucc":1.0,"auca":0.9003,"apc":1.0,"apa":0.6956,"f1d":0.3078,"aucd":0.0997,"sev":"CRITICAL","l2":6.1833,"pctu":0.0,"pctfooled":0.2902,"pctpred":0.301}},"FEAT-invert":{"ingestion":{"ac":0.9557,"aa":0.3152,"ad":0.6405,"ev":0.6998,"prc":0.9732,"pra":0.4287,"f1c":0.9424,"f1a":0.3526,"tprc":0.8983,"tpra":0.1985,"fprc":0.0053,"fpra":0.0989,"aucc":1.0,"auca":0.7125,"apc":1.0,"apa":0.2129,"f1d":0.5898,"aucd":0.2875,"sev":"CRITICAL","l2":8.0401,"pctu":0.0,"pctfooled":0.6424,"pctpred":0.6813},"triage":{"ac":0.9999,"aa":0.5247,"ad":0.4752,"ev":0.5748,"prc":0.9999,"pra":0.5616,"f1c":0.9999,"f1a":0.5334,"tprc":0.9998,"tpra":0.425,"fprc":0.0,"fpra":0.184,"aucc":1.0,"auca":0.686,"apc":1.0,"apa":0.4329,"f1d":0.4665,"aucd":0.314,"sev":"CRITICAL","l2":8.0343,"pctu":0.0,"pctfooled":0.4752,"pctpred":0.4753},"detection":{"ac":0.9997,"aa":0.1207,"ad":0.879,"ev":0.924,"prc":0.9997,"pra":0.2622,"f1c":0.9997,"f1a":0.1365,"tprc":0.9993,"tpra":0.0753,"fprc":0.0,"fpra":0.1064,"aucc":1.0,"auca":0.493,"apc":1.0,"apa":0.0956,"f1d":0.8632,"aucd":0.507,"sev":"CRITICAL","l2":8.0448,"pctu":0.0,"pctfooled":0.879,"pctpred":0.8793},"siem":{"ac":0.9558,"aa":0.2976,"ad":0.6582,"ev":0.7184,"prc":0.9732,"pra":0.4244,"f1c":0.9427,"f1a":0.339,"tprc":0.8987,"tpra":0.1803,"fprc":0.0053,"fpra":0.1001,"aucc":1.0,"auca":0.7077,"apc":1.0,"apa":0.2113,"f1d":0.6037,"aucd":0.2923,"sev":"CRITICAL","l2":8.0422,"pctu":0.0,"pctfooled":0.6604,"pctpred":0.6994},"soar":{"ac":0.9844,"aa":0.4398,"ad":0.5446,"ev":0.6623,"prc":0.987,"pra":0.4177,"f1c":0.9842,"f1a":0.4277,"tprc":0.9554,"tpra":0.2931,"fprc":0.0034,"fpra":0.1877,"aucc":1.0,"auca":0.6221,"apc":1.0,"apa":0.3327,"f1d":0.5565,"aucd":0.3779,"sev":"CRITICAL","l2":8.0375,"pctu":0.0,"pctfooled":0.5517,"pctpred":0.5661}},"POISON-mimicry":{"ingestion":{"ac":0.9557,"aa":0.1274,"ad":0.8283,"ev":0.7174,"prc":0.9732,"pra":0.6916,"f1c":0.9424,"f1a":0.1823,"tprc":0.8983,"tpra":0.1809,"fprc":0.0053,"fpra":0.1022,"aucc":1.0,"auca":0.6375,"apc":1.0,"apa":0.2273,"f1d":0.7601,"aucd":0.3625,"sev":"CRITICAL","l2":15.1294,"pctu":0.0388,"pctfooled":0.8293,"pctpred":0.8721},"triage":{"ac":0.9999,"aa":0.2966,"ad":0.7033,"ev":0.6737,"prc":0.9999,"pra":0.6145,"f1c":0.9999,"f1a":0.2866,"tprc":0.9998,"tpra":0.3261,"fprc":0.0,"fpra":0.21,"aucc":1.0,"auca":0.6936,"apc":1.0,"apa":0.3635,"f1d":0.7133,"aucd":0.3064,"sev":"CRITICAL","l2":15.1185,"pctu":0.0388,"pctfooled":0.7033,"pctpred":0.7034},"detection":{"ac":0.9997,"aa":0.0415,"ad":0.9582,"ev":0.8813,"prc":0.9997,"pra":0.0021,"f1c":0.9997,"f1a":0.0039,"tprc":0.9993,"tpra":0.118,"fprc":0.0,"fpra":0.0993,"aucc":1.0,"auca":0.5376,"apc":1.0,"apa":0.1954,"f1d":0.9958,"aucd":0.4624,"sev":"CRITICAL","l2":15.1381,"pctu":0.0388,"pctfooled":0.9582,"pctpred":0.9584},"siem":{"ac":0.9558,"aa":0.1239,"ad":0.8319,"ev":0.7254,"prc":0.9732,"pra":0.6892,"f1c":0.9427,"f1a":0.1783,"tprc":0.8987,"tpra":0.1733,"fprc":0.0053,"fpra":0.1025,"aucc":1.0,"auca":0.6865,"apc":1.0,"apa":0.2319,"f1d":0.7644,"aucd":0.3135,"sev":"CRITICAL","l2":15.1334,"pctu":0.0388,"pctfooled":0.8334,"pctpred":0.8753},"soar":{"ac":0.9844,"aa":0.3658,"ad":0.6186,"ev":0.6057,"prc":0.987,"pra":0.8111,"f1c":0.9842,"f1a":0.4284,"tprc":0.9554,"tpra":0.3497,"fprc":0.0034,"fpra":0.138,"aucc":1.0,"auca":0.7791,"apc":1.0,"apa":0.4066,"f1d":0.5558,"aucd":0.2209,"sev":"CRITICAL","l2":15.1245,"pctu":0.0388,"pctfooled":0.6285,"pctpred":0.6384}},"POISON-boundary":{"ingestion":{"ac":0.9557,"aa":0.8472,"ad":0.1085,"ev":0.2517,"prc":0.9732,"pra":0.8599,"f1c":0.9424,"f1a":0.8391,"tprc":0.8983,"tpra":0.6466,"fprc":0.0053,"fpra":0.0185,"aucc":1.0,"auca":0.991,"apc":1.0,"apa":0.7383,"f1d":0.1033,"aucd":0.009,"sev":"CRITICAL","l2":2.5373,"pctu":0.0388,"pctfooled":0.1151,"pctpred":0.1496},"triage":{"ac":0.9999,"aa":0.8457,"ad":0.1542,"ev":0.2683,"prc":0.9999,"pra":0.8423,"f1c":0.9999,"f1a":0.8419,"tprc":0.9998,"tpra":0.7315,"fprc":0.0,"fpra":0.045,"aucc":1.0,"auca":0.9705,"apc":1.0,"apa":0.7529,"f1d":0.158,"aucd":0.0295,"sev":"CRITICAL","l2":2.5355,"pctu":0.0388,"pctfooled":0.1542,"pctpred":0.1542},"detection":{"ac":0.9997,"aa":0.8375,"ad":0.1622,"ev":0.3438,"prc":0.9997,"pra":0.821,"f1c":0.9997,"f1a":0.8246,"tprc":0.9993,"tpra":0.6555,"fprc":0.0,"fpra":0.0172,"aucc":1.0,"auca":0.9876,"apc":1.0,"apa":0.6968,"f1d":0.1751,"aucd":0.0124,"sev":"CRITICAL","l2":2.5388,"pctu":0.0388,"pctfooled":0.1623,"pctpred":0.1625},"siem":{"ac":0.9558,"aa":0.8461,"ad":0.1097,"ev":0.2528,"prc":0.9732,"pra":0.8541,"f1c":0.9427,"f1a":0.8384,"tprc":0.8987,"tpra":0.6459,"fprc":0.0053,"fpra":0.0185,"aucc":1.0,"auca":0.9913,"apc":1.0,"apa":0.7343,"f1d":0.1043,"aucd":0.0087,"sev":"CRITICAL","l2":2.538,"pctu":0.0388,"pctfooled":0.116,"pctpred":0.1494},"soar":{"ac":0.9844,"aa":0.8908,"ad":0.0936,"ev":0.1677,"prc":0.987,"pra":0.9058,"f1c":0.9842,"f1a":0.8955,"tprc":0.9554,"tpra":0.7877,"fprc":0.0034,"fpra":0.0247,"aucc":1.0,"auca":0.9854,"apc":1.0,"apa":0.8403,"f1d":0.0887,"aucd":0.0146,"sev":"HIGH","l2":2.5365,"pctu":0.0388,"pctfooled":0.1043,"pctpred":0.1151}},"POISON-grad-mim":{"ingestion":{"ac":0.9557,"aa":0.154,"ad":0.8017,"ev":0.6781,"prc":0.9732,"pra":0.6732,"f1c":0.9424,"f1a":0.213,"tprc":0.8983,"tpra":0.2202,"fprc":0.0053,"fpra":0.0997,"aucc":1.0,"auca":0.6945,"apc":1.0,"apa":0.2365,"f1d":0.7294,"aucd":0.3055,"sev":"CRITICAL","l2":14.3754,"pctu":0.0388,"pctfooled":0.8039,"pctpred":0.8469},"triage":{"ac":0.9999,"aa":0.3121,"ad":0.6878,"ev":0.6594,"prc":0.9999,"pra":0.6299,"f1c":0.9999,"f1a":0.3148,"tprc":0.9998,"tpra":0.3404,"fprc":0.0,"fpra":0.205,"aucc":1.0,"auca":0.7168,"apc":1.0,"apa":0.3752,"f1d":0.6851,"aucd":0.2832,"sev":"CRITICAL","l2":14.365,"pctu":0.0388,"pctfooled":0.6878,"pctpred":0.6879},"detection":{"ac":0.9997,"aa":0.0541,"ad":0.9456,"ev":0.7997,"prc":0.9997,"pra":0.0039,"f1c":0.9997,"f1a":0.0071,"tprc":0.9993,"tpra":0.1996,"fprc":0.0,"fpra":0.0971,"aucc":1.0,"auca":0.7396,"apc":1.0,"apa":0.2922,"f1d":0.9926,"aucd":0.2604,"sev":"CRITICAL","l2":14.3837,"pctu":0.0388,"pctfooled":0.9456,"pctpred":0.9458},"siem":{"ac":0.9558,"aa":0.1513,"ad":0.8045,"ev":0.6761,"prc":0.9732,"pra":0.6674,"f1c":0.9427,"f1a":0.2092,"tprc":0.8987,"tpra":0.2226,"fprc":0.0053,"fpra":0.0999,"aucc":1.0,"auca":0.7189,"apc":1.0,"apa":0.2456,"f1d":0.7335,"aucd":0.2811,"sev":"CRITICAL","l2":14.3791,"pctu":0.0388,"pctfooled":0.8067,"pctpred":0.8488},"soar":{"ac":0.9844,"aa":0.3781,"ad":0.6063,"ev":0.5918,"prc":0.987,"pra":0.8079,"f1c":0.9842,"f1a":0.4422,"tprc":0.9554,"tpra":0.3636,"fprc":0.0034,"fpra":0.1353,"aucc":1.0,"auca":0.7837,"apc":1.0,"apa":0.4443,"f1d":0.542,"aucd":0.2163,"sev":"CRITICAL","l2":14.3707,"pctu":0.0388,"pctfooled":0.6157,"pctpred":0.6251}},"TRANSFER \u03b5=0.20":{"ingestion":{"ac":0.9557,"aa":0.9546,"ad":0.0011,"ev":0.0039,"prc":0.9732,"pra":0.9614,"f1c":0.9424,"f1a":0.9525,"tprc":0.8983,"tpra":0.8944,"fprc":0.0053,"fpra":0.0054,"aucc":1.0,"auca":0.9994,"apc":1.0,"apa":0.9871,"f1d":-0.0101,"aucd":0.0006,"sev":"LOW","l2":1.1373,"pctu":0.0,"pctfooled":0.0362,"pctpred":0.0713},"triage":{"ac":0.9999,"aa":0.9882,"ad":0.0117,"ev":0.0245,"prc":0.9999,"pra":0.9889,"f1c":0.9999,"f1a":0.9882,"tprc":0.9998,"tpra":0.9753,"fprc":0.0,"fpra":0.0035,"aucc":1.0,"auca":0.9999,"apc":1.0,"apa":0.9991,"f1d":0.0117,"aucd":0.0001,"sev":"MEDIUM","l2":1.1365,"pctu":0.0,"pctfooled":0.0118,"pctpred":0.0118},"detection":{"ac":0.9997,"aa":0.9565,"ad":0.0432,"ev":0.1449,"prc":0.9997,"pra":0.9593,"f1c":0.9997,"f1a":0.9532,"tprc":0.9993,"tpra":0.8544,"fprc":0.0,"fpra":0.0045,"aucc":1.0,"auca":0.999,"apc":1.0,"apa":0.9248,"f1d":0.0465,"aucd":0.001,"sev":"HIGH","l2":1.1379,"pctu":0.0,"pctfooled":0.0433,"pctpred":0.0436},"siem":{"ac":0.9558,"aa":0.9641,"ad":-0.0083,"ev":0.0,"prc":0.9732,"pra":0.9678,"f1c":0.9427,"f1a":0.9642,"tprc":0.8987,"tpra":0.924,"fprc":0.0053,"fpra":0.0043,"aucc":1.0,"auca":0.9995,"apc":1.0,"apa":0.9891,"f1d":-0.0215,"aucd":0.0005,"sev":"LOW","l2":1.1376,"pctu":0.0,"pctfooled":0.0275,"pctpred":0.0632},"soar":{"ac":0.9844,"aa":0.9645,"ad":0.0199,"ev":0.0517,"prc":0.987,"pra":0.9678,"f1c":0.9842,"f1a":0.964,"tprc":0.9554,"tpra":0.9037,"fprc":0.0034,"fpra":0.0084,"aucc":1.0,"auca":0.9998,"apc":1.0,"apa":0.9939,"f1d":0.0202,"aucd":0.0002,"sev":"MEDIUM","l2":1.1369,"pctu":0.0,"pctfooled":0.02,"pctpred":0.0201}},"CONSTRAINED \u03b5=0.15":{"ingestion":{"ac":0.9557,"aa":0.7771,"ad":0.1786,"ev":0.3362,"prc":0.9732,"pra":0.791,"f1c":0.9424,"f1a":0.7318,"tprc":0.8983,"tpra":0.5621,"fprc":0.0053,"fpra":0.0365,"aucc":1.0,"auca":0.9923,"apc":1.0,"apa":0.7785,"f1d":0.2106,"aucd":0.0077,"sev":"CRITICAL","l2":1.5525,"pctu":0.0,"pctfooled":0.1839,"pctpred":0.21},"triage":{"ac":0.9999,"aa":0.8763,"ad":0.1236,"ev":0.2317,"prc":0.9999,"pra":0.8664,"f1c":0.9999,"f1a":0.8603,"tprc":0.9998,"tpra":0.7681,"fprc":0.0,"fpra":0.0512,"aucc":1.0,"auca":0.9877,"apc":1.0,"apa":0.8845,"f1d":0.1396,"aucd":0.0123,"sev":"CRITICAL","l2":1.5513,"pctu":0.0,"pctfooled":0.1236,"pctpred":0.1236},"detection":{"ac":0.9997,"aa":0.6844,"ad":0.3153,"ev":0.6803,"prc":0.9997,"pra":0.7409,"f1c":0.9997,"f1a":0.6718,"tprc":0.9993,"tpra":0.319,"fprc":0.0,"fpra":0.0329,"aucc":1.0,"auca":0.9721,"apc":1.0,"apa":0.4415,"f1d":0.3279,"aucd":0.0279,"sev":"CRITICAL","l2":1.5533,"pctu":0.0,"pctfooled":0.3153,"pctpred":0.3156},"siem":{"ac":0.9558,"aa":0.7763,"ad":0.1795,"ev":0.3202,"prc":0.9732,"pra":0.721,"f1c":0.9427,"f1a":0.7301,"tprc":0.8987,"tpra":0.5785,"fprc":0.0053,"fpra":0.0369,"aucc":1.0,"auca":0.9922,"apc":1.0,"apa":0.8043,"f1d":0.2126,"aucd":0.0078,"sev":"CRITICAL","l2":1.5529,"pctu":0.0,"pctfooled":0.1864,"pctpred":0.2135},"soar":{"ac":0.9844,"aa":0.8096,"ad":0.1748,"ev":0.3101,"prc":0.987,"pra":0.7491,"f1c":0.9842,"f1a":0.7718,"tprc":0.9554,"tpra":0.6453,"fprc":0.0034,"fpra":0.0746,"aucc":1.0,"auca":0.9662,"apc":1.0,"apa":0.8474,"f1d":0.2124,"aucd":0.0338,"sev":"CRITICAL","l2":1.5519,"pctu":0.0,"pctfooled":0.1877,"pctpred":0.2004}},"CONSTRAINED \u03b5=0.30":{"ingestion":{"ac":0.9557,"aa":0.766,"ad":0.1897,"ev":0.3551,"prc":0.9732,"pra":0.783,"f1c":0.9424,"f1a":0.7211,"tprc":0.8983,"tpra":0.5432,"fprc":0.0053,"fpra":0.0378,"aucc":1.0,"auca":0.99,"apc":1.0,"apa":0.7339,"f1d":0.2213,"aucd":0.01,"sev":"CRITICAL","l2":1.6736,"pctu":0.0,"pctfooled":0.1947,"pctpred":0.2206},"triage":{"ac":0.9999,"aa":0.8521,"ad":0.1478,"ev":0.2602,"prc":0.9999,"pra":0.8445,"f1c":0.9999,"f1a":0.8375,"tprc":0.9998,"tpra":0.7396,"fprc":0.0,"fpra":0.0584,"aucc":1.0,"auca":0.982,"apc":1.0,"apa":0.8608,"f1d":0.1624,"aucd":0.018,"sev":"CRITICAL","l2":1.6724,"pctu":0.0,"pctfooled":0.1478,"pctpred":0.1478},"detection":{"ac":0.9997,"aa":0.6805,"ad":0.3192,"ev":0.6877,"prc":0.9997,"pra":0.7384,"f1c":0.9997,"f1a":0.6682,"tprc":0.9993,"tpra":0.3116,"fprc":0.0,"fpra":0.0334,"aucc":1.0,"auca":0.9706,"apc":1.0,"apa":0.4359,"f1d":0.3315,"aucd":0.0294,"sev":"CRITICAL","l2":1.6746,"pctu":0.0,"pctfooled":0.3192,"pctpred":0.3195},"siem":{"ac":0.9558,"aa":0.7575,"ad":0.1983,"ev":0.3581,"prc":0.9732,"pra":0.7025,"f1c":0.9427,"f1a":0.7135,"tprc":0.8987,"tpra":0.5406,"fprc":0.0053,"fpra":0.039,"aucc":1.0,"auca":0.9896,"apc":1.0,"apa":0.7517,"f1d":0.2292,"aucd":0.0104,"sev":"CRITICAL","l2":1.6741,"pctu":0.0,"pctfooled":0.2045,"pctpred":0.2316},"soar":{"ac":0.9844,"aa":0.7889,"ad":0.1955,"ev":0.3478,"prc":0.987,"pra":0.7268,"f1c":0.9842,"f1a":0.7526,"tprc":0.9554,"tpra":0.6076,"fprc":0.0034,"fpra":0.0789,"aucc":1.0,"auca":0.9564,"apc":1.0,"apa":0.8084,"f1d":0.2316,"aucd":0.0436,"sev":"CRITICAL","l2":1.6731,"pctu":0.0,"pctfooled":0.2084,"pctpred":0.2212}},"AUTOATTACK \u03b5=0.20":{"ingestion":{"ac":0.9557,"aa":0.7674,"ad":0.1883,"ev":0.3922,"prc":0.9732,"pra":0.766,"f1c":0.9424,"f1a":0.7461,"tprc":0.8983,"tpra":0.5061,"fprc":0.0053,"fpra":0.0304,"aucc":1.0,"auca":0.9843,"apc":1.0,"apa":0.6377,"f1d":0.1963,"aucd":0.0157,"sev":"CRITICAL","l2":2.6261,"pctu":0.0,"pctfooled":0.1964,"pctpred":0.2148},"triage":{"ac":0.9999,"aa":0.8335,"ad":0.1664,"ev":0.3055,"prc":0.9999,"pra":0.8149,"f1c":0.9999,"f1a":0.8146,"tprc":0.9998,"tpra":0.6943,"fprc":0.0,"fpra":0.0526,"aucc":1.0,"auca":0.9747,"apc":1.0,"apa":0.7839,"f1d":0.1853,"aucd":0.0253,"sev":"CRITICAL","l2":2.6242,"pctu":0.0,"pctfooled":0.1665,"pctpred":0.1665},"detection":{"ac":0.9997,"aa":0.6752,"ad":0.3245,"ev":0.7659,"prc":0.9997,"pra":0.6926,"f1c":0.9997,"f1a":0.6816,"tprc":0.9993,"tpra":0.2334,"fprc":0.0,"fpra":0.0354,"aucc":1.0,"auca":0.9537,"apc":1.0,"apa":0.3227,"f1d":0.3181,"aucd":0.0463,"sev":"CRITICAL","l2":2.6276,"pctu":0.0,"pctfooled":0.3245,"pctpred":0.3247},"siem":{"ac":0.9558,"aa":0.7704,"ad":0.1854,"ev":0.3763,"prc":0.9732,"pra":0.7736,"f1c":0.9427,"f1a":0.7517,"tprc":0.8987,"tpra":0.5224,"fprc":0.0053,"fpra":0.0299,"aucc":1.0,"auca":0.9841,"apc":1.0,"apa":0.639,"f1d":0.191,"aucd":0.0159,"sev":"CRITICAL","l2":2.6268,"pctu":0.0,"pctfooled":0.1932,"pctpred":0.2115},"soar":{"ac":0.9844,"aa":0.8362,"ad":0.1482,"ev":0.3147,"prc":0.987,"pra":0.8236,"f1c":0.9842,"f1a":0.8086,"tprc":0.9554,"tpra":0.6407,"fprc":0.0034,"fpra":0.0487,"aucc":1.0,"auca":0.9759,"apc":1.0,"apa":0.7837,"f1d":0.1756,"aucd":0.0241,"sev":"CRITICAL","l2":2.6253,"pctu":0.0,"pctfooled":0.1543,"pctpred":0.1604}}} };
+const REAL_STAT_TESTS = { cicids2017: {"ingestion":{"mean_acc_drop":0.1992,"std_acc_drop":0.2127,"ci_95_lower":0.1275,"ci_95_upper":0.2818,"wilcoxon_p":3e-06,"significant_005":true,"n_attacks":30},"triage":{"mean_acc_drop":0.1887,"std_acc_drop":0.175,"ci_95_lower":0.1307,"ci_95_upper":0.2559,"wilcoxon_p":1e-06,"significant_005":true,"n_attacks":30},"detection":{"mean_acc_drop":0.2927,"std_acc_drop":0.2369,"ci_95_lower":0.2112,"ci_95_upper":0.386,"wilcoxon_p":1e-06,"significant_005":true,"n_attacks":30},"siem":{"mean_acc_drop":0.203,"std_acc_drop":0.2143,"ci_95_lower":0.1311,"ci_95_upper":0.2862,"wilcoxon_p":2e-06,"significant_005":true,"n_attacks":30},"soar":{"mean_acc_drop":0.1806,"std_acc_drop":0.1665,"ci_95_lower":0.1232,"ci_95_upper":0.2444,"wilcoxon_p":1e-06,"significant_005":true,"n_attacks":30}} };
+
+
+const MITRE_DATA = [
+  {label:'ddos',tactic:'Impact',technique:'Network Denial of Service',tid:'T1498'},
+  {label:'portscan',tactic:'Discovery',technique:'Network Service Discovery',tid:'T1046'},
+  {label:'bruteforce',tactic:'Credential Access',technique:'Brute Force',tid:'T1110'},
+  {label:'botnet',tactic:'Command & Control',technique:'Application Layer Protocol',tid:'T1071'},
+  {label:'heartbleed',tactic:'Initial Access',technique:'Exploit Public-Facing Application',tid:'T1190'},
+  {label:'exfiltration',tactic:'Exfiltration',technique:'Exfiltration Over C2 Channel',tid:'T1041'},
+  {label:'infiltration',tactic:'Initial Access',technique:'Exploit Public-Facing Application',tid:'T1190'},
+  {label:'malware',tactic:'Execution',technique:'User Execution: Malicious File',tid:'T1204.002'},
+  {label:'ransomware',tactic:'Impact',technique:'Data Encrypted for Impact',tid:'T1486'},
+  {label:'lateral_movement',tactic:'Lateral Movement',technique:'Remote Services',tid:'T1021'},
+  {label:'sql injection',tactic:'Initial Access',technique:'Exploit Public-Facing Application',tid:'T1190'},
+  {label:'xss',tactic:'Initial Access',technique:'Drive-by Compromise',tid:'T1189'},
+  {label:'c2',tactic:'Command & Control',technique:'Application Layer Protocol',tid:'T1071'},
+  {label:'dosslowloris',tactic:'Impact',technique:'Endpoint Denial of Service',tid:'T1499'},
+  {label:'ftp-patator',tactic:'Credential Access',technique:'Brute Force: Password Spraying',tid:'T1110.003'},
+  {label:'backdoor',tactic:'Persistence',technique:'Server Software Component',tid:'T1505'},
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  STATE
+// ─────────────────────────────────────────────────────────────────────────────
+let state = {
+  currentDs: 'cicids2017',
+  atkDs: 'cicids2017',
+  rtDs: 'cicids2017',
+  metricsDs: 'cicids2017',
+  allMetrics: {},
+  lastAttack: null,
+  feedEvents: 0,
+  streamInterval: null,
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  UTILS
+// ─────────────────────────────────────────────────────────────────────────────
+const fmt  = v => typeof v === 'number' ? (v*100).toFixed(1)+'%' : '—';
+const fmt4 = v => typeof v === 'number' ? v.toFixed(4) : '—';
+const fmtDrop = v => typeof v === 'number' ? (v >= 0 ? '-'+(v*100).toFixed(1)+'%' : '+'+Math.abs(v*100).toFixed(1)+'%') : '—';
+const ts = () => new Date().toLocaleTimeString('en-GB',{hour12:false});
+
+function colorForValue(v, invert=false) {
+  if (v == null) return 'var(--text2)';
+  if (invert) v = 1 - v;
+  if (v >= 0.95) return 'var(--green)';
+  if (v >= 0.85) return '#69f0ae';
+  if (v >= 0.75) return 'var(--amber)';
+  if (v >= 0.60) return '#ff6d00';
+  return 'var(--red)';
+}
+function heatBg(v) {
+  if (v == null) return '';
+  const r = Math.round(Math.min(255, (1-v)*350));
+  const g = Math.round(Math.min(255, v*280));
+  return `background:rgba(${r},${g},0,0.12)`;
+}
+
+function log(msg, level='info') {
+  const feed = document.getElementById('live-feed');
+  if (!feed) return;
+  const line = document.createElement('div');
+  line.className = 'log-line';
+  line.innerHTML = `<span class="log-ts">${ts()}</span><span class="log-lvl lv-${level}">${{ok:'✔',warn:'⚠',err:'✖',info:'→'}[level]||'→'}</span><span class="log-msg">${msg}</span>`;
+  feed.prepend(line);
+  if (feed.children.length > 200) feed.lastChild.remove();
+}
+
+function badge(status) {
+  return `<span class="status-badge ${status}">${status}</span>`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  CLOCK
+// ─────────────────────────────────────────────────────────────────────────────
+setInterval(() => {
+  const c = document.getElementById('clock');
+  if (c) c.textContent = new Date().toLocaleTimeString('en-GB',{hour12:false});
+}, 1000);
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  TABS
+// ─────────────────────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('page-'+t.dataset.tab).classList.add('active');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  DATASET SELECTORS
+// ─────────────────────────────────────────────────────────────────────────────
+function bindDsButtons(attr, onChange) {
+  document.querySelectorAll(`[${attr}]`).forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll(`[${attr}]`).forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      onChange(btn.dataset[attr.replace('data-','')]);
+    });
+  });
+}
+bindDsButtons('data-ds',  ds => { state.currentDs = ds; loadOverview(ds); });
+bindDsButtons('data-ds2', ds => {
+  state.atkDs = ds;
+  // Reset the panel and reflect whether real trained/tested data exists for this dataset
+  document.getElementById('atk-tbody').innerHTML = '';
+  document.getElementById('cmp-bars-acc').innerHTML = '';
+  document.getElementById('cmp-bars-f1').innerHTML = '';
+  document.getElementById('atk-breached').textContent = '—';
+  document.getElementById('atk-avg-drop').textContent = '—';
+  document.getElementById('atk-max-evasion').textContent = '—';
+  document.getElementById('atk-severity').textContent = '—';
+  document.getElementById('cascade-bar').style.width = '0%';
+  document.getElementById('cascade-pct').textContent = '0%';
+  document.getElementById('stat-panel').style.display = 'none';
+  document.getElementById('forensics-panel').style.display = 'none';
+  renderPipelineCards('atk-pipeline-cards', CLEAN_BASELINE_REAL[ds] || state.allMetrics[ds] || {}, null);
+
+  const srcInfo = document.getElementById('atk-source-info');
+  const srcSpan = document.getElementById('atk-source');
+  if (REAL_ATTACK_RESULTS[ds]) {
+    srcInfo.style.display = 'block';
+    srcSpan.textContent = 'Real trained/tested results available — cicids2017_cascade_matrix.csv. Select an attack and Launch.';
+  } else {
+    srcInfo.style.display = 'block';
+    srcSpan.textContent = `No uploaded real-experiment file for ${ds.toUpperCase()} yet — results will come from the live API (simulated/demo mode).`;
+  }
+});
+bindDsButtons('data-ds3', ds => { state.metricsDs = ds; renderMetricsPage(ds); });
+bindDsButtons('data-ds4', ds => { state.rtDs = ds; });
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  API STATUS
+// ─────────────────────────────────────────────────────────────────────────────
+async function checkStatus() {
+  try {
+    const r = await fetch(API+'/api/status',{signal:AbortSignal.timeout(3000)});
+    const d = await r.json();
+    const dot = document.getElementById('api-dot');
+    dot.className = 'dot ok';
+    document.getElementById('api-label').textContent = 'API Online';
+
+    const pipe = document.getElementById('pipe-dot');
+    pipe.className = 'dot '+(d.pipeline_available ? 'ok' : 'warn');
+    document.getElementById('pipe-label').textContent = d.pipeline_available ? 'Pipeline OK' : 'Demo Mode';
+
+    const adv = document.getElementById('adv-dot');
+    adv.className = 'dot '+(d.adversarial_available ? 'ok' : 'warn');
+    document.getElementById('adv-label').textContent = d.adversarial_available ? 'Adv Module OK' : 'Adv Simulated';
+
+    const trained = Object.values(d.models_trained || {}).filter(Boolean).length;
+    document.getElementById('kpi-models').textContent = trained+'/'+DATASETS.length;
+    log('API status OK — pipeline:'+(d.pipeline_available?'real':'demo'),'ok');
+    return d;
+  } catch(e) {
+    document.getElementById('api-dot').className = 'dot err';
+    document.getElementById('api-label').textContent = 'API Offline';
+    log('Cannot reach Flask API at '+API+' — run: python p1_App.py','err');
+    return null;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  METRICS LOADER
+// ─────────────────────────────────────────────────────────────────────────────
+async function fetchMetrics(ds) {
+  if (state.allMetrics[ds]) return state.allMetrics[ds];
+  try {
+    const r = await fetch(`${API}/api/metrics/${ds}`);
+    const d = await r.json();
+    state.allMetrics[ds] = d.metrics || {};
+    return state.allMetrics[ds];
+  } catch {
+    // Return baseline fallback
+    const fallback = {
+      cicids2017:{ingestion:{accuracy:0.972,f1_score:0.968,tpr:0.971,fpr:0.028,auc_roc:0.991,precision:0.970,recall:0.971},triage:{accuracy:0.961,f1_score:0.954,tpr:0.958,fpr:0.040,auc_roc:0.982,precision:0.960,recall:0.958},detection:{accuracy:0.985,f1_score:0.981,tpr:0.983,fpr:0.018,auc_roc:0.996,precision:0.983,recall:0.983},siem:{accuracy:0.958,f1_score:0.952,tpr:0.955,fpr:0.044,auc_roc:0.980,precision:0.956,recall:0.955},soar:{accuracy:0.943,f1_score:0.938,tpr:0.940,fpr:0.061,auc_roc:0.973,precision:0.942,recall:0.940}},
+      ember:{ingestion:{accuracy:0.958,f1_score:0.951,tpr:0.955,fpr:0.042,auc_roc:0.983,precision:0.953,recall:0.955},triage:{accuracy:0.934,f1_score:0.926,tpr:0.930,fpr:0.068,auc_roc:0.971,precision:0.928,recall:0.930},detection:{accuracy:0.971,f1_score:0.965,tpr:0.968,fpr:0.033,auc_roc:0.990,precision:0.967,recall:0.968},siem:{accuracy:0.942,f1_score:0.935,tpr:0.940,fpr:0.059,auc_roc:0.972,precision:0.938,recall:0.940},soar:{accuracy:0.927,f1_score:0.919,tpr:0.922,fpr:0.079,auc_roc:0.961,precision:0.921,recall:0.922}},
+      loghub:{ingestion:{accuracy:0.963,f1_score:0.957,tpr:0.960,fpr:0.036,auc_roc:0.987,precision:0.959,recall:0.960},triage:{accuracy:0.948,f1_score:0.941,tpr:0.944,fpr:0.055,auc_roc:0.976,precision:0.943,recall:0.944},detection:{accuracy:0.969,f1_score:0.963,tpr:0.966,fpr:0.028,auc_roc:0.992,precision:0.965,recall:0.966},siem:{accuracy:0.937,f1_score:0.930,tpr:0.933,fpr:0.064,auc_roc:0.970,precision:0.932,recall:0.933},soar:{accuracy:0.915,f1_score:0.908,tpr:0.911,fpr:0.084,auc_roc:0.958,precision:0.910,recall:0.911}},
+    };
+    state.allMetrics[ds] = fallback[ds] || {};
+    return state.allMetrics[ds];
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  OVERVIEW PAGE
+// ─────────────────────────────────────────────────────────────────────────────
+async function loadOverview(ds) {
+  document.getElementById('pipeline-ds-label').textContent = ds.toUpperCase();
+  const m = await fetchMetrics(ds);
+
+  // KPI: avg accuracy
+  const avgAcc = LAYERS.reduce((s,l) => s + (m[l]?.accuracy||0), 0) / LAYERS.length;
+  document.getElementById('kpi-acc').textContent = (avgAcc*100).toFixed(1)+'%';
+
+  // Pipeline cards
+  renderPipelineCards('pipeline-cards', m, null);
+
+  // Bars
+  renderBars('acc-bars', m, 'accuracy', 'clean');
+  renderBars('f1-bars',  m, 'f1_score', 'clean');
+
+  // Table
+  renderMetricsTableBody('metrics-tbody', m);
+
+  log(`Loaded metrics for ${ds.toUpperCase()}`,'ok');
+}
+
+function renderPipelineCards(containerId, cleanMetrics, advMetrics) {
+  const c = document.getElementById(containerId);
+  if (!c) return;
+  c.innerHTML = LAYERS.map(l => {
+    const cm = cleanMetrics[l] || {};
+    const am = advMetrics ? (advMetrics[l] || {}) : null;
+    const status = advMetrics ? (am._status || 'STABLE') : 'STABLE';
+    const acc = am ? am.accuracy : cm.accuracy;
+    const drop = am ? (cm.accuracy - am.accuracy) : 0;
+    return `
+    <div class="layer-card ${status}">
+      <div class="layer-name" style="color:${LAYER_COLORS[l]}">${l.toUpperCase()}</div>
+      <div class="layer-algo">${LAYER_ALGOS[l]}</div>
+      <div class="layer-metric">
+        <span class="layer-metric-label">Accuracy</span>
+        <span class="layer-metric-val" style="color:${colorForValue(acc)}">${fmt(acc)}</span>
+      </div>
+      <div class="layer-metric">
+        <span class="layer-metric-label">F1-Score</span>
+        <span class="layer-metric-val" style="color:${colorForValue(cm.f1_score)}">${fmt(cm.f1_score)}</span>
+      </div>
+      <div class="layer-metric">
+        <span class="layer-metric-label">AUC-ROC</span>
+        <span class="layer-metric-val" style="color:${colorForValue(cm.auc_roc)}">${fmt(cm.auc_roc)}</span>
+      </div>
+      ${am ? `<div class="layer-metric"><span class="layer-metric-label" style="color:var(--red)">Acc Drop</span><span class="layer-metric-val" style="color:var(--red)">${fmtDrop(drop)}</span></div>` : ''}
+      ${badge(status)}
+    </div>`;
+  }).join('');
+}
+
+function renderBars(containerId, m, metric, type) {
+  const c = document.getElementById(containerId);
+  if (!c) return;
+  c.innerHTML = LAYERS.map(l => {
+    const v = m[l]?.[metric] || 0;
+    return `
+    <div class="bar-row">
+      <span class="bar-label">${l}</span>
+      <div class="bar-track"><div class="bar-fill ${type}" style="width:${(v*100).toFixed(1)}%"></div></div>
+      <span class="bar-val">${fmt(v)}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderDoubleBars(containerId, cleanM, advM, metric) {
+  const c = document.getElementById(containerId);
+  if (!c) return;
+  c.innerHTML = LAYERS.map(l => {
+    const cv = cleanM[l]?.[metric] || 0;
+    const av = advM?.[l]?.adversarial?.[metric] ?? advM?.[l]?.[metric] ?? cv;
+    return `
+    <div class="bar-row">
+      <span class="bar-label">${l}</span>
+      <div style="flex:1">
+        <div class="bar-row" style="margin-bottom:2px">
+          <div class="bar-track" style="flex:1"><div class="bar-fill clean" style="width:${(cv*100).toFixed(1)}%"></div></div>
+          <span class="bar-val">${fmt(cv)}</span>
+        </div>
+        <div class="bar-row">
+          <div class="bar-track" style="flex:1"><div class="bar-fill adv" style="width:${(av*100).toFixed(1)}%"></div></div>
+          <span class="bar-val" style="color:var(--red)">${fmt(av)}</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderMetricsTableBody(tbodyId, m) {
+  const tb = document.getElementById(tbodyId);
+  if (!tb) return;
+  tb.innerHTML = LAYERS.map(l => {
+    const d = m[l] || {};
+    return `<tr>
+      <td style="color:${LAYER_COLORS[l]};font-weight:700">${l}</td>
+      <td style="color:var(--text2)">${LAYER_ALGOS[l]}</td>
+      <td style="color:${colorForValue(d.accuracy)}">${fmt(d.accuracy)}</td>
+      <td style="color:${colorForValue(d.f1_score)}">${fmt(d.f1_score)}</td>
+      <td>${fmt(d.precision)}</td>
+      <td>${fmt(d.recall)}</td>
+      <td style="color:${colorForValue(d.tpr)}">${fmt(d.tpr)}</td>
+      <td style="color:${colorForValue(d.fpr,true)}">${fmt(d.fpr)}</td>
+      <td style="color:${colorForValue(d.auc_roc)}">${fmt(d.auc_roc)}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  ATTACK SIMULATOR  (real trained/tested results — no ε/strength sliders;
+//  each dropdown option IS a specific, already-run experiment)
+// ─────────────────────────────────────────────────────────────────────────────
+document.getElementById('run-attack').addEventListener('click', runAttack);
+document.getElementById('reset-attack').addEventListener('click', () => {
+  document.getElementById('atk-breached').textContent = '—';
+  document.getElementById('atk-avg-drop').textContent = '—';
+  document.getElementById('atk-max-evasion').textContent = '—';
+  document.getElementById('atk-severity').textContent = '—';
+  document.getElementById('cascade-bar').style.width = '0%';
+  document.getElementById('cascade-pct').textContent = '0%';
+  document.getElementById('atk-tbody').innerHTML = '';
+  renderPipelineCards('atk-pipeline-cards', state.allMetrics[state.atkDs] || {}, null);
+  document.getElementById('cmp-bars-acc').innerHTML = '';
+  document.getElementById('cmp-bars-f1').innerHTML = '';
+  document.getElementById('stat-panel').style.display = 'none';
+  document.getElementById('forensics-panel').style.display = 'none';
+  state.lastAttack = null;
+  log('Attack simulation reset','info');
+});
+
+// Build a renderAttackResults()-compatible object straight from the real,
+// trained/tested experiment data (REAL_ATTACK_RESULTS) — no simulation.
+function buildRealAttackResult(ds, attackValue) {
+  const attackKey = ATTACK_KEY_MAP[attackValue];
+  const table = REAL_ATTACK_RESULTS[ds] && REAL_ATTACK_RESULTS[ds][attackKey];
+  if (!table) return null;
+
+  const layers = LAYERS.map(layer => {
+    const e = table[layer];
+    const clean = { accuracy:e.ac, precision:e.prc, recall:e.ac, f1_score:e.f1c, tpr:e.tprc, fpr:e.fprc, auc_roc:e.aucc, avg_precision:e.apc };
+    const adv   = { accuracy:e.aa, precision:e.pra, recall:e.aa, f1_score:e.f1a, tpr:e.tpra, fpr:e.fpra, auc_roc:e.auca, avg_precision:e.apa };
+    const drop  = e.ad;
+    const status = drop > 0.12 ? 'BREACHED' : drop > 0.05 ? 'DEGRADED' : 'STABLE';
+    return {
+      layer, algorithm: LAYER_ALGOS[layer],
+      clean, adversarial: adv,
+      acc_drop: drop, f1_drop: e.f1d, auc_drop: e.aucd,
+      evasion: e.ev, status,
+      severity: e.sev, l2_mean: e.l2, pct_unchanged: e.pctu,
+      pct_truly_fooled: e.pctfooled, pct_pred_changed: e.pctpred,
+    };
+  });
+
+  const breached = layers.filter(l => l.status === 'BREACHED').length;
+  return {
+    dataset: ds, attack: attackValue, attack_label: attackKey,
+    layers,
+    layers_breached: breached,
+    avg_acc_drop: round4(layers.reduce((s,l) => s + l.acc_drop, 0) / layers.length),
+    max_evasion: round4(Math.max(...layers.map(l => l.evasion))),
+    statistical_tests: REAL_STAT_TESTS[ds] || {},
+    source: 'real_experiment',
+    _cached: false,
+  };
+}
+const round4 = v => Math.round(v * 10000) / 10000;
+
+async function runAttack() {
+  const ds        = state.atkDs;
+  const attack    = document.getElementById('atk-select').value;
+  const attackKey = ATTACK_KEY_MAP[attack];
+
+  // Animate overlay
+  const overlay = document.getElementById('atk-overlay');
+  const prog    = document.getElementById('atk-prog');
+  const msg     = document.getElementById('atk-progress-msg');
+  overlay.classList.add('show');
+  prog.style.width = '0%';
+
+  const stages = [
+    [30,'Loading trained/tested result — '+attackKey+'…'],
+    [60,'Reading cascade metrics across L1→L5…'],
+    [100,'Rendering results…'],
+  ];
+  let si = 0;
+  const progInt = setInterval(() => {
+    if (si < stages.length) {
+      prog.style.width = stages[si][0]+'%';
+      msg.textContent = stages[si][1];
+      si++;
+    }
+  }, 180);
+
+  log(`⚔ Loading real result: ${attackKey} on ${ds.toUpperCase()}`,'warn');
+
+  const finish = (d) => {
+    clearInterval(progInt);
+    overlay.classList.remove('show');
+    state.lastAttack = d;
+    renderAttackResults(d, ds);
+    log(`Attack complete — ${d.layers_breached} layers BREACHED, avg drop ${(d.avg_acc_drop*100).toFixed(2)}%`,'warn');
+    document.getElementById('atk-source-info').style.display = 'block';
+    document.getElementById('atk-source').textContent =
+      d.source === 'real_experiment' ? `Real trained/tested result — ${attackKey} (${ds})` : d.source;
+    syncLiveDropsToCharts(d, ds, attack);
+  };
+
+  const real = buildRealAttackResult(ds, attack);
+  if (real) {
+    setTimeout(() => finish(real), 550);
+    return;
+  }
+
+  // Fallback for datasets without an uploaded real-experiment file (EMBER/LogHub)
+  try {
+    const r = await fetch(`${API}/api/attack`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({dataset:ds, attack, epsilon:0.10, strength:1.0}),
+    });
+    const d = await r.json();
+    finish(d);
+  } catch(e) {
+    clearInterval(progInt);
+    overlay.classList.remove('show');
+    log('Attack API call failed: '+e.message+' — no real experiment file for '+ds.toUpperCase()+' either.','err');
+  }
+}
+
+function renderAttackResults(d, ds) {
+  const layers = d.layers || [];
+
+  // KPIs
+  const b = d.layers_breached;
+  const bEl = document.getElementById('atk-breached');
+  bEl.textContent = b;
+  bEl.className = 'kpi-value '+(b >= 3 ? 'danger' : b >= 1 ? 'warn' : 'ok');
+
+  const avgEl = document.getElementById('atk-avg-drop');
+  avgEl.textContent = (d.avg_acc_drop*100).toFixed(2)+'%';
+  avgEl.className = 'kpi-value '+(d.avg_acc_drop > 0.12 ? 'danger' : d.avg_acc_drop > 0.05 ? 'warn' : 'ok');
+
+  const maxE = document.getElementById('atk-max-evasion');
+  maxE.textContent = (d.max_evasion*100).toFixed(1)+'%';
+  maxE.className = 'kpi-value '+(d.max_evasion > 0.4 ? 'danger' : 'warn');
+
+  const sev = b >= 4 ? 'CRITICAL' : b >= 2 ? 'HIGH' : b >= 1 ? 'MEDIUM' : 'LOW';
+  const sevEl = document.getElementById('atk-severity');
+  sevEl.textContent = sev;
+  sevEl.className = 'kpi-value '+(sev === 'CRITICAL' ? 'danger' : sev === 'HIGH' ? 'warn' : 'ok');
+
+  const pct = Math.max(0, Math.min(d.avg_acc_drop * 500, 100));
+  document.getElementById('cascade-bar').style.width = pct+'%';
+  document.getElementById('cascade-pct').textContent = pct.toFixed(1)+'%';
+
+  // Pipeline cards with adversarial overlay — prefer exact real baseline when available
+  const cleanM = CLEAN_BASELINE_REAL[ds] || state.allMetrics[ds] || {};
+  const advMap = {};
+  layers.forEach(l => {
+    advMap[l.layer] = {
+      ...(l.adversarial || {}),
+      _status: l.status,
+    };
+  });
+  renderPipelineCards('atk-pipeline-cards', cleanM, advMap);
+
+  // Comparison bars
+  const advMetrics = {};
+  layers.forEach(l => { advMetrics[l.layer] = l; });
+  renderDoubleBars('cmp-bars-acc', cleanM, advMetrics, 'accuracy');
+  renderDoubleBars('cmp-bars-f1',  cleanM, advMetrics, 'f1_score');
+
+  // Table
+  const tb = document.getElementById('atk-tbody');
+  tb.innerHTML = layers.map(l => {
+    const c = l.clean || {}; const a = l.adversarial || {};
+    return `<tr>
+      <td style="color:${LAYER_COLORS[l.layer]};font-weight:700">${l.layer}</td>
+      <td style="color:var(--text2)">${l.algorithm}</td>
+      <td>${fmt(c.accuracy)}</td>
+      <td style="color:${colorForValue(a.accuracy)}">${fmt(a.accuracy)}</td>
+      <td style="color:${l.acc_drop > 0.12 ? 'var(--red)' : l.acc_drop > 0.05 ? 'var(--amber)' : 'var(--green)'}">${fmtDrop(l.acc_drop)}</td>
+      <td>${fmt(c.f1_score)}</td>
+      <td style="color:${colorForValue(a.f1_score)}">${fmt(a.f1_score)}</td>
+      <td style="color:var(--amber)">${fmtDrop(l.f1_drop)}</td>
+      <td style="color:var(--red)">${fmt(l.evasion)}</td>
+      <td>${badge(l.status)}</td>
+    </tr>`;
+  }).join('');
+
+  // Statistical tests
+  if (d.statistical_tests && Object.keys(d.statistical_tests).length > 0) {
+    document.getElementById('stat-panel').style.display = 'block';
+    const stb = document.getElementById('stat-tbody');
+    stb.innerHTML = Object.entries(d.statistical_tests).map(([layer,s]) => `<tr>
+      <td style="color:${LAYER_COLORS[layer]}">${layer}</td>
+      <td>${fmt4(s.mean_acc_drop)}</td>
+      <td>${fmt4(s.std_acc_drop)}</td>
+      <td>[${fmt4(s.ci_95_lower)}, ${fmt4(s.ci_95_upper)}]</td>
+      <td style="font-family:var(--mono)">${s.wilcoxon_p ? s.wilcoxon_p.toExponential(3) : '—'}</td>
+      <td style="color:${s.significant_005 ? 'var(--red)' : 'var(--green)'}">${s.significant_005 ? '✔ YES' : '✖ NO'}</td>
+    </tr>`).join('');
+  } else {
+    document.getElementById('stat-panel').style.display = 'none';
+  }
+
+  // Attack forensics — perturbation & fooled-model analysis (only present for real results)
+  const hasForensics = layers.length && layers[0].severity !== undefined;
+  const fp = document.getElementById('forensics-panel');
+  if (hasForensics) {
+    fp.style.display = 'block';
+    const sevColor = s => s === 'CRITICAL' ? 'var(--red)' : s === 'HIGH' ? 'var(--red)' : s === 'MEDIUM' ? 'var(--amber)' : 'var(--green)';
+    document.getElementById('forensics-tbody').innerHTML = layers.map(l => `<tr>
+      <td style="color:${LAYER_COLORS[l.layer]};font-weight:700">${l.layer}</td>
+      <td style="color:${sevColor(l.severity)};font-weight:700">${l.severity}</td>
+      <td style="font-family:var(--mono)">${l.l2_mean.toFixed(4)}</td>
+      <td>${(l.pct_unchanged*100).toFixed(2)}%</td>
+      <td>${(l.pct_pred_changed*100).toFixed(2)}%</td>
+      <td style="color:var(--red)">${(l.pct_truly_fooled*100).toFixed(2)}%</td>
+    </tr>`).join('');
+  } else {
+    fp.style.display = 'none';
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  METRICS PAGE
+// ─────────────────────────────────────────────────────────────────────────────
+async function renderMetricsPage(ds) {
+  const m = await fetchMetrics(ds);
+  renderBars('tpr-bars', m, 'tpr', 'clean');
+  renderBars('auc-bars', m, 'auc_roc', 'clean');
+
+  // Heatmap across all datasets
+  const heatTb = document.getElementById('heat-tbody');
+  const rows = [];
+  for (const d of DATASETS) {
+    const dm = await fetchMetrics(d);
+    for (const l of LAYERS) {
+      const lm = dm[l] || {};
+      rows.push(`<tr>
+        <td><span style="color:var(--text2);font-size:9px">${d.toUpperCase()}</span> / <span style="color:${LAYER_COLORS[l]};font-weight:700">${l}</span></td>
+        <td style="${heatBg(lm.accuracy)};color:${colorForValue(lm.accuracy)}">${fmt(lm.accuracy)}</td>
+        <td style="${heatBg(lm.f1_score)};color:${colorForValue(lm.f1_score)}">${fmt(lm.f1_score)}</td>
+        <td style="${heatBg(lm.precision)}">${fmt(lm.precision)}</td>
+        <td style="${heatBg(lm.recall)}">${fmt(lm.recall)}</td>
+        <td style="${heatBg(lm.tpr)};color:${colorForValue(lm.tpr)}">${fmt(lm.tpr)}</td>
+        <td style="${heatBg(1-lm.fpr)};color:${colorForValue(lm.fpr,true)}">${fmt(lm.fpr)}</td>
+        <td style="${heatBg(lm.auc_roc)};color:${colorForValue(lm.auc_roc)}">${fmt(lm.auc_roc)}</td>
+      </tr>`);
+    }
+  }
+  heatTb.innerHTML = rows.join('');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  REALTIME / NORMAL EVENT
+// ─────────────────────────────────────────────────────────────────────────────
+document.getElementById('run-rt').addEventListener('click', runNormalEvent);
+document.getElementById('run-stream').addEventListener('click', runStream);
+
+async function runNormalEvent() {
+  const ds = state.rtDs;
+  const eventType = document.getElementById('rt-event').value;
+  log(`Running ${eventType} event through ${ds.toUpperCase()} pipeline…`,'info');
+  try {
+    const r = await fetch(`${API}/api/normal_event`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({dataset:ds, event_type:eventType}),
+    });
+    const d = await r.json();
+    renderNormalEvent(d);
+    log(`Event ${d.event_id} → risk=${(d.risk_score*100).toFixed(1)}% action=${d.final_action}`,'ok');
+  } catch(e) {
+    log('Normal event call failed: '+e.message,'err');
+  }
+}
+
+function renderNormalEvent(d) {
+  const riskColor = d.risk_score > 0.7 ? 'var(--red)' : d.risk_score > 0.4 ? 'var(--amber)' : 'var(--green)';
+  const body = document.getElementById('normal-event-body');
+  body.innerHTML = `
+    <div class="row mb8">
+      <span style="font-family:var(--mono);color:var(--blue)">${d.event_id}</span>
+      <span style="font-family:var(--mono);font-size:11px;color:${riskColor}">Risk: ${(d.risk_score*100).toFixed(1)}%</span>
+      <span style="font-family:var(--mono);font-size:11px">${d.final_action||''}</span>
+    </div>
+    ${(d.layers||[]).map(l => `
+    <div class="bar-row" style="margin-bottom:6px">
+      <span class="bar-label" style="color:${LAYER_COLORS[l.layer]}">${l.layer}</span>
+      <div style="flex:1">
+        <div style="font-family:var(--mono);font-size:10px;color:var(--text)">→ ${l.prediction} <span style="color:var(--text2)">(${(l.confidence*100).toFixed(1)}%)</span></div>
+        <div class="bar-track" style="margin-top:2px"><div class="bar-fill clean" style="width:${(l.risk*100).toFixed(1)}%"></div></div>
+      </div>
+      <span class="bar-val">${fmt(l.risk)}</span>
+    </div>`).join('')}
+    <div class="mt8" style="font-size:10px;color:var(--text3)">Source: ${d.source}</div>`;
+
+  // Playbook
+  const pb = document.getElementById('playbook-body');
+  const steps = d.playbook || [];
+  pb.innerHTML = steps.length
+    ? `<div class="mb8" style="color:${d.escalate?'var(--red)':'var(--green)'};font-weight:700;font-size:12px">${d.escalate ? '🔴 ESCALATED TO ANALYST' : '🟢 AUTOMATED RESPONSE'}</div>` +
+      steps.map((s,i) => `<div style="padding:4px 0;border-bottom:1px solid var(--border2);font-size:11px"><span style="color:var(--text3);font-family:var(--mono)">${i+1}.</span> ${s}</div>`).join('')
+    : '<span style="color:var(--text3)">No playbook steps.</span>';
+}
+
+async function runStream() {
+  if (state.streamInterval) {
+    clearInterval(state.streamInterval);
+    state.streamInterval = null;
+    document.getElementById('run-stream').textContent = '⟳ Stream Events';
+    document.getElementById('feed-dot').style.animation = 'none';
+    document.getElementById('feed-dot').style.opacity = '.4';
+    log('Event stream stopped','info');
+    return;
+  }
+  document.getElementById('run-stream').textContent = '⏹ Stop Stream';
+  document.getElementById('feed-dot').style.animation = 'pulse 1.8s infinite';
+  document.getElementById('feed-dot').style.opacity = '1';
+  log('Event stream started','ok');
+
+  const doFetch = async () => {
+    const ds = state.rtDs;
+    const n  = parseInt(document.getElementById('rt-n').value) || 5;
+    try {
+      const r = await fetch(`${API}/api/realtime/${ds}?n=${Math.min(n,5)}`);
+      const d = await r.json();
+      (d.events || []).forEach(ev => {
+        const risk = ev.risk_score;
+        const lvl = risk > 0.7 ? 'err' : risk > 0.4 ? 'warn' : 'ok';
+        log(`${ev.event_id} risk=${(risk*100).toFixed(1)}% → ${ev.final_action}`, lvl);
+        state.feedEvents++;
+        document.getElementById('feed-count').textContent = state.feedEvents+' events';
+      });
+    } catch(e) {
+      log('Stream error: '+e.message,'err');
+    }
+  };
+  await doFetch();
+  state.streamInterval = setInterval(doFetch, 3000);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  MITRE PAGE
+// ─────────────────────────────────────────────────────────────────────────────
+function renderMitrePage() {
+  const tactics = {};
+  MITRE_DATA.forEach(e => {
+    if (!tactics[e.tactic]) tactics[e.tactic] = [];
+    tactics[e.tactic].push(e);
+  });
+
+  const tacticColors = {
+    'Impact':'#ff3d3d','Discovery':'#00d4ff','Credential Access':'#ffb300',
+    'Command & Control':'#b388ff','Initial Access':'#ff6d00',
+    'Exfiltration':'#f50057','Execution':'#69f0ae',
+    'Lateral Movement':'#40c4ff','Persistence':'#ea80fc',
+  };
+
+  const content = document.getElementById('mitre-content');
+  content.innerHTML = Object.entries(tactics).map(([tactic, items]) => `
+    <div class="panel mb8" style="border-color:${tacticColors[tactic]||'var(--border)'}22;background:var(--bg2)">
+      <div style="font-size:12px;font-weight:700;color:${tacticColors[tactic]||'var(--blue)'};margin-bottom:8px">
+        ${tactic}
+      </div>
+      <div>${items.map(i => `<span class="mitre-tag" title="${i.technique}">${i.tid} · ${i.label}</span>`).join('')}</div>
+    </div>`).join('');
+
+  const tb = document.getElementById('mitre-tbody');
+  tb.innerHTML = MITRE_DATA.map(e => `<tr>
+    <td style="color:var(--text)">${e.label}</td>
+    <td style="color:${tacticColors[e.tactic]||'var(--blue)'};">${e.tactic}</td>
+    <td style="color:var(--text2)">${e.technique}</td>
+    <td><span class="mitre-tag">${e.tid}</span></td>
+  </tr>`).join('');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  INIT
+// ─────────────────────────────────────────────────────────────────────────────
+async function init() {
+  // Clock
+  const clockEl = document.getElementById('clock');
+  if (clockEl) clockEl.textContent = new Date().toLocaleTimeString('en-GB',{hour12:false});
+
+  // Init pipeline attack cards empty
+  renderPipelineCards('atk-pipeline-cards', {}, null);
+
+  // MITRE page
+  renderMitrePage();
+
+  // Status
+  await checkStatus();
+  setInterval(checkStatus, 30000);
+
+  // Load initial overview
+  await loadOverview('cicids2017');
+
+  // Metrics page
+  await renderMetricsPage('cicids2017');
+
+  log('Dashboard initialised — connecting to '+API,'ok');
+}
+
+bindDsButtons('data-ds5', ds => { state.chartsDs = ds; refreshAllCharts(); });
+document.getElementById('chart-atk-select').addEventListener('change', refreshAllCharts);
+document.getElementById('refresh-charts').addEventListener('click', refreshAllCharts);
+
+init();
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  CHART ENGINE — pure Canvas, no external deps
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── colour palette ────────────────────────────────────────────────────────────
+const C = {
+  blue:   '#00d4ff', blue2: '#0088cc', blue3: 'rgba(0,212,255,0.18)',
+  red:    '#ff3d3d', red2:  '#ff7043', red3:  'rgba(255,61,61,0.18)',
+  green:  '#00e676', green3:'rgba(0,230,118,0.15)',
+  amber:  '#ffb300', amber3:'rgba(255,179,0,0.15)',
+  purple: '#b388ff', teal:  '#1de9b6', pink: '#f48fb1',
+  text:   '#c8d8e8', text2: '#7a9ab8', text3: '#3d5a72',
+  grid:   'rgba(26,51,80,0.6)', bg: '#050c14', bg2: '#091420',
+  layerColors: ['#00d4ff','#00b0d4','#0088cc','#7c4dff','#00e676'],
+  atkColors:   ['#ff3d3d','#ffb300','#b388ff','#1de9b6','#f48fb1','#ff7043','#40c4ff'],
+};
+
+// Layer short labels
+const LBL = ['Ingest','Triage','Detect','SIEM','SOAR'];
+
+// ── canvas helpers ────────────────────────────────────────────────────────────
+function setupCanvas(id) {
+  const canvas = document.getElementById(id);
+  if (!canvas) return null;
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.parentElement.getBoundingClientRect();
+  const w = Math.floor(rect.width - 32);
+  const h = parseInt(canvas.getAttribute('height')) || 220;
+  canvas.width  = w * dpr;
+  canvas.height = h * dpr;
+  canvas.style.width  = w + 'px';
+  canvas.style.height = h + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, w, h);
+  return { ctx, w, h };
+}
+
+function drawGrid(ctx, x0, y0, x1, y1, rows, cols) {
+  ctx.strokeStyle = C.grid;
+  ctx.lineWidth = 0.5;
+  for (let i = 0; i <= rows; i++) {
+    const y = y0 + (y1 - y0) * (i / rows);
+    ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke();
+  }
+  for (let i = 0; i <= cols; i++) {
+    const x = x0 + (x1 - x0) * (i / cols);
+    ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x, y1); ctx.stroke();
+  }
+}
+
+function labelX(ctx, labels, x0, x1, yBase, fontSize=10) {
+  ctx.fillStyle = C.text2; ctx.font = `${fontSize}px 'Share Tech Mono',monospace`;
+  ctx.textAlign = 'center';
+  labels.forEach((l, i) => {
+    const x = x0 + (x1 - x0) * (i / (labels.length - 1));
+    ctx.fillText(l, x, yBase);
+  });
+}
+
+function labelY(ctx, min, max, x0, y0, y1, steps=5) {
+  ctx.fillStyle = C.text2; ctx.font = "9px 'Share Tech Mono',monospace";
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= steps; i++) {
+    const v = min + (max - min) * (i / steps);
+    const y = y1 - (y1 - y0) * (i / steps);
+    ctx.fillText((v * 100).toFixed(0) + '%', x0 - 4, y + 3);
+  }
+}
+
+function mapY(v, min, max, y0, y1) {
+  return y1 - (y1 - y0) * ((v - min) / (max - min));
+}
+
+function drawLineSeries(ctx, values, x0, x1, y0, y1, min, max, color, lineW=2, dashed=false) {
+  if (!values || values.length < 2) return;
+  if (dashed) ctx.setLineDash([5, 4]); else ctx.setLineDash([]);
+  ctx.strokeStyle = color; ctx.lineWidth = lineW;
+  ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  ctx.beginPath();
+  values.forEach((v, i) => {
+    const x = x0 + (x1 - x0) * (i / (values.length - 1));
+    const y = mapY(v, min, max, y0, y1);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function drawDots(ctx, values, x0, x1, y0, y1, min, max, color, r=4) {
+  values.forEach((v, i) => {
+    const x = x0 + (x1 - x0) * (i / (values.length - 1));
+    const y = mapY(v, min, max, y0, y1);
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = C.bg; ctx.fill();
+    ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.stroke();
+  });
+}
+
+// ── Attack drop profiles (mirrors App.py ATK_DROPS) ──────────────────────────
+const ATK_DROPS = {
+  fgsm_001:[.010,.013,.018,.011,.013], fgsm_005:[.022,.028,.042,.025,.030],
+  fgsm_010:[.038,.048,.072,.042,.051], fgsm_020:[.060,.076,.115,.068,.082],
+  fgsm_030:[.082,.105,.160,.093,.115],
+  pgd_001: [.015,.020,.030,.017,.020], pgd_005: [.035,.044,.068,.039,.047],
+  pgd_010: [.058,.073,.112,.065,.078], pgd_020: [.088,.112,.170,.098,.120],
+  pgd_030: [.115,.148,.228,.130,.160],
+  mifgsm_010:[.065,.083,.125,.072,.088], mifgsm_020:[.095,.122,.185,.107,.132],
+  mifgsm_030:[.125,.160,.245,.140,.175],
+  cw_05:[.075,.096,.145,.085,.105], cw_10:[.095,.122,.185,.108,.133],
+  cw_20:[.118,.152,.232,.132,.165],
+  deepfool_002:[.068,.088,.132,.077,.095], deepfool_005:[.088,.112,.172,.098,.122],
+  auto_020:[.105,.135,.205,.118,.145],
+};
+
+const HEATMAP_ATTACKS = ['fgsm_010','fgsm_020','pgd_010','pgd_020','mifgsm_020','cw_10','auto_020'];
+const MULTI_ATTACKS   = ['fgsm_010','pgd_010','mifgsm_020','cw_10','auto_020'];
+const HEATMAP_LABELS  = ['FGSM-10','FGSM-20','PGD-10','PGD-20','MIFGSM','C&W','Auto'];
+const MULTI_LABELS    = ['FGSM ε.10','PGD ε.10','MI-FGSM','C&W','AutoAtk'];
+
+// ── Baseline fallback ─────────────────────────────────────────────────────────
+const BASE = {
+  cicids2017:{ingestion:{accuracy:.972,f1_score:.968,tpr:.971,fpr:.028,auc_roc:.991,precision:.970},triage:{accuracy:.961,f1_score:.954,tpr:.958,fpr:.040,auc_roc:.982,precision:.960},detection:{accuracy:.985,f1_score:.981,tpr:.983,fpr:.018,auc_roc:.996,precision:.983},siem:{accuracy:.958,f1_score:.952,tpr:.955,fpr:.044,auc_roc:.980,precision:.956},soar:{accuracy:.943,f1_score:.938,tpr:.940,fpr:.061,auc_roc:.973,precision:.942}},
+  ember:{ingestion:{accuracy:.958,f1_score:.951,tpr:.955,fpr:.042,auc_roc:.983,precision:.953},triage:{accuracy:.934,f1_score:.926,tpr:.930,fpr:.068,auc_roc:.971,precision:.928},detection:{accuracy:.971,f1_score:.965,tpr:.968,fpr:.033,auc_roc:.990,precision:.967},siem:{accuracy:.942,f1_score:.935,tpr:.940,fpr:.059,auc_roc:.972,precision:.938},soar:{accuracy:.927,f1_score:.919,tpr:.922,fpr:.079,auc_roc:.961,precision:.921}},
+  loghub:{ingestion:{accuracy:.963,f1_score:.957,tpr:.960,fpr:.036,auc_roc:.987,precision:.959},triage:{accuracy:.948,f1_score:.941,tpr:.944,fpr:.055,auc_roc:.976,precision:.943},detection:{accuracy:.969,f1_score:.963,tpr:.966,fpr:.028,auc_roc:.992,precision:.965},siem:{accuracy:.937,f1_score:.930,tpr:.933,fpr:.064,auc_roc:.970,precision:.932},soar:{accuracy:.915,f1_score:.908,tpr:.911,fpr:.084,auc_roc:.958,precision:.910}},
+};
+
+function getMetrics(ds) {
+  return state.allMetrics[ds] || BASE[ds] || BASE.cicids2017;
+}
+
+function applyDrop(baseAcc, drops, atkKey) {
+  const d = drops || ATK_DROPS[atkKey] || ATK_DROPS.fgsm_010;
+  return LAYERS.map((_, i) => Math.max(baseAcc[i] - d[i], 0.30));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 1. LINE CHART — cascade clean → adversarial
+// ─────────────────────────────────────────────────────────────────────────────
+function drawLineChart(ds, atkKey) {
+  const cv = setupCanvas('chart-line');
+  if (!cv) return;
+  const { ctx, w, h } = cv;
+  const pad = { t:20, r:20, b:36, l:52 };
+  const x0 = pad.l, x1 = w - pad.r, y0 = pad.t, y1 = h - pad.b;
+
+  const m = getMetrics(ds);
+  const cleanAcc = LAYERS.map(l => {
+    const lv = getLiveMet(atkKey, ds, l);
+    return (lv?.clean?.accuracy) || m[l]?.accuracy || 0.95;
+  });
+  const drops    = getDrops(atkKey, ds);
+  const isLive   = !!state.liveDropsMap[`${ds}|${atkKey}`];
+  const advAcc   = LAYERS.map((l, i) => {
+    const lv = getLiveMet(atkKey, ds, l);
+    return (lv?.adv?.accuracy) || Math.max(cleanAcc[i] - drops[i], 0.30);
+  });
+  drawLiveStamp(ctx, w, isLive);
+  const allVals  = [...cleanAcc, ...advAcc];
+  const minV = Math.max(Math.min(...allVals) - 0.04, 0);
+  const maxV = Math.min(Math.max(...allVals) + 0.02, 1.0);
+
+  drawGrid(ctx, x0, y0, x1, y1, 5, 4);
+  labelY(ctx, minV, maxV, x0, y0, y1, 5);
+
+  // Filled area between clean and adv
+  ctx.beginPath();
+  cleanAcc.forEach((v, i) => {
+    const x = x0 + (x1 - x0) * (i / (LAYERS.length - 1));
+    i === 0 ? ctx.moveTo(x, mapY(v, minV, maxV, y0, y1)) : ctx.lineTo(x, mapY(v, minV, maxV, y0, y1));
+  });
+  for (let i = LAYERS.length - 1; i >= 0; i--) {
+    const x = x0 + (x1 - x0) * (i / (LAYERS.length - 1));
+    ctx.lineTo(x, mapY(advAcc[i], minV, maxV, y0, y1));
+  }
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(255,61,61,0.10)';
+  ctx.fill();
+
+  // Drop arrows
+  LAYERS.forEach((_, i) => {
+    const x  = x0 + (x1 - x0) * (i / (LAYERS.length - 1));
+    const yC = mapY(cleanAcc[i], minV, maxV, y0, y1);
+    const yA = mapY(advAcc[i],   minV, maxV, y0, y1);
+    ctx.strokeStyle = 'rgba(255,61,61,0.35)'; ctx.lineWidth = 1; ctx.setLineDash([3,3]);
+    ctx.beginPath(); ctx.moveTo(x, yC); ctx.lineTo(x, yA); ctx.stroke();
+    ctx.setLineDash([]);
+    // drop label
+    ctx.fillStyle = C.amber; ctx.font = "9px 'Share Tech Mono',monospace"; ctx.textAlign = 'center';
+    ctx.fillText('-'+(drops[i]*100).toFixed(1)+'%', x, (yC + yA)/2 + 3);
+  });
+
+  drawLineSeries(ctx, cleanAcc, x0, x1, y0, y1, minV, maxV, C.blue, 2.5);
+  drawLineSeries(ctx, advAcc,   x0, x1, y0, y1, minV, maxV, C.red,  2.5);
+  drawDots(ctx, cleanAcc, x0, x1, y0, y1, minV, maxV, C.blue, 5);
+  drawDots(ctx, advAcc,   x0, x1, y0, y1, minV, maxV, C.red,  5);
+
+  // X labels
+  ctx.fillStyle = C.text2; ctx.font = "10px 'Share Tech Mono',monospace"; ctx.textAlign = 'center';
+  LBL.forEach((l, i) => {
+    const x = x0 + (x1 - x0) * (i / (LBL.length - 1));
+    ctx.fillStyle = C.layerColors[i]; ctx.fillText(l, x, y1 + 18);
+  });
+
+  // Legend
+  const leg = document.getElementById('chart-line-legend');
+  if (leg) leg.innerHTML = `
+    <span style="color:${C.blue}">●</span><span style="color:${C.text2}"> Clean Accuracy</span>
+    <span style="color:${C.red}">●</span><span style="color:${C.text2}"> Adversarial Accuracy</span>
+    <span style="color:${C.amber}">▲</span><span style="color:${C.text2}"> Drop (labelled)</span>`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 2. RADAR CHART
+// ─────────────────────────────────────────────────────────────────────────────
+function drawRadarChart(ds, atkKey) {
+  const cv = setupCanvas('chart-radar');
+  if (!cv) return;
+  const { ctx, w, h } = cv;
+  const cx = w / 2, cy = h / 2 - 4;
+  const R = Math.min(w, h) / 2 - 32;
+  const metrics = ['accuracy','f1_score','tpr','auc_roc','precision'];
+  const metLabels = ['Accuracy','F1-Score','TPR','AUC-ROC','Precision'];
+  const N = metrics.length;
+  const m = getMetrics(ds);
+  const drops = getDrops(atkKey, ds);
+  const isLive = !!state.liveDropsMap[`${ds}|${atkKey}`];
+  drawLiveStamp(ctx, w, isLive);
+  const avgDrop = drops.reduce((s,d)=>s+d,0) / drops.length;
+
+  // Grid rings
+  [0.2,0.4,0.6,0.8,1.0].forEach(ring => {
+    ctx.beginPath();
+    for (let i = 0; i < N; i++) {
+      const angle = (2*Math.PI*i/N) - Math.PI/2;
+      const x = cx + R * ring * Math.cos(angle);
+      const y = cy + R * ring * Math.sin(angle);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = C.grid; ctx.lineWidth = 0.7; ctx.stroke();
+    // ring label
+    ctx.fillStyle = C.text3; ctx.font = "8px 'Share Tech Mono',monospace"; ctx.textAlign = 'left';
+    ctx.fillText((ring*100).toFixed(0)+'%', cx + R*ring*Math.cos(-Math.PI/2) + 3, cy + R*ring*Math.sin(-Math.PI/2));
+  });
+
+  // Spokes
+  for (let i = 0; i < N; i++) {
+    const angle = (2*Math.PI*i/N) - Math.PI/2;
+    ctx.beginPath(); ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + R*Math.cos(angle), cy + R*Math.sin(angle));
+    ctx.strokeStyle = C.grid; ctx.lineWidth = 0.7; ctx.stroke();
+    // Labels
+    const lx = cx + (R+22)*Math.cos(angle), ly = cy + (R+22)*Math.sin(angle);
+    ctx.fillStyle = C.text2; ctx.font = "9px 'Share Tech Mono',monospace";
+    ctx.textAlign = Math.cos(angle) > 0.1 ? 'left' : Math.cos(angle) < -0.1 ? 'right' : 'center';
+    ctx.fillText(metLabels[i], lx, ly);
+  }
+
+  // Avg clean & adversarial values per metric (avg across layers)
+  const cleanVals = metrics.map(met => {
+    return LAYERS.reduce((s,l) => s + (m[l]?.[met] || 0), 0) / LAYERS.length;
+  });
+  const advVals = cleanVals.map((v, mi) => {
+    if (mi === 3 /*fpr — lower is better, so adv FPR rises, but here we skip*/) return v;
+    return Math.max(v - avgDrop * (mi === 2 ? 0.9 : mi === 4 ? 0.85 : 1.0), 0.3);
+  });
+
+  function drawRadarPoly(vals, color, fillOpacity) {
+    ctx.beginPath();
+    vals.forEach((v, i) => {
+      const angle = (2*Math.PI*i/N) - Math.PI/2;
+      const r = R * Math.min(v, 1);
+      const x = cx + r*Math.cos(angle), y = cy + r*Math.sin(angle);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.closePath();
+    ctx.fillStyle = color.replace(')',`,${fillOpacity})`).replace('rgb','rgba');
+    ctx.fill();
+    ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.stroke();
+  }
+
+  drawRadarPoly(cleanVals, C.blue, 0.12);
+  drawRadarPoly(advVals,   C.red,  0.12);
+
+  // Dots
+  cleanVals.forEach((v, i) => {
+    const angle = (2*Math.PI*i/N) - Math.PI/2;
+    const r = R * Math.min(v, 1);
+    ctx.beginPath(); ctx.arc(cx+r*Math.cos(angle), cy+r*Math.sin(angle), 4, 0, Math.PI*2);
+    ctx.fillStyle = C.blue; ctx.fill();
+  });
+  advVals.forEach((v, i) => {
+    const angle = (2*Math.PI*i/N) - Math.PI/2;
+    const r = R * Math.min(v, 1);
+    ctx.beginPath(); ctx.arc(cx+r*Math.cos(angle), cy+r*Math.sin(angle), 4, 0, Math.PI*2);
+    ctx.fillStyle = C.red; ctx.fill();
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 3. GROUPED BAR
+// ─────────────────────────────────────────────────────────────────────────────
+function drawGroupedBar(ds, atkKey) {
+  const cv = setupCanvas('chart-grouped-bar');
+  if (!cv) return;
+  const { ctx, w, h } = cv;
+  const pad = { t:20, r:20, b:42, l:48 };
+  const x0 = pad.l, x1 = w - pad.r, y0 = pad.t, y1 = h - pad.b;
+  const m = getMetrics(ds);
+  const isLive = !!state.liveDropsMap[`${ds}|${atkKey}`];
+  const cleanAcc = LAYERS.map(l => {
+    const lv = getLiveMet(atkKey, ds, l);
+    return (lv?.clean?.accuracy) || m[l]?.accuracy || 0.95;
+  });
+  const drops    = getDrops(atkKey, ds);
+  const advAcc   = LAYERS.map((l, i) => {
+    const lv = getLiveMet(atkKey, ds, l);
+    return (lv?.adv?.accuracy) || Math.max(cleanAcc[i] - drops[i], 0.30);
+  });
+  drawLiveStamp(ctx, w, isLive);
+  const allV = [...cleanAcc, ...advAcc];
+  const minV = Math.max(Math.min(...allV) - 0.05, 0);
+  const maxV = 1.0;
+
+  drawGrid(ctx, x0, y0, x1, y1, 5, LAYERS.length);
+  labelY(ctx, minV, maxV, x0, y0, y1, 5);
+
+  const groupW = (x1 - x0) / LAYERS.length;
+  const barW   = groupW * 0.32;
+  const gap    = groupW * 0.04;
+
+  LAYERS.forEach((_, gi) => {
+    const gx = x0 + groupW * gi + groupW * 0.12;
+    // clean bar
+    const yClean = mapY(cleanAcc[gi], minV, maxV, y0, y1);
+    const grad1 = ctx.createLinearGradient(gx, yClean, gx, y1);
+    grad1.addColorStop(0, C.blue); grad1.addColorStop(1, C.blue2);
+    ctx.fillStyle = grad1;
+    ctx.fillRect(gx, yClean, barW, y1 - yClean);
+    // adv bar
+    const yAdv = mapY(advAcc[gi], minV, maxV, y0, y1);
+    const grad2 = ctx.createLinearGradient(gx+barW+gap, yAdv, gx+barW+gap, y1);
+    grad2.addColorStop(0, C.red); grad2.addColorStop(1, '#9b0000');
+    ctx.fillStyle = grad2;
+    ctx.fillRect(gx + barW + gap, yAdv, barW, y1 - yAdv);
+    // drop annotation
+    const dropPct = (drops[gi]*100).toFixed(1);
+    ctx.fillStyle = C.amber; ctx.font = "9px 'Share Tech Mono',monospace"; ctx.textAlign = 'center';
+    ctx.fillText('-'+dropPct+'%', gx + barW + gap/2 + barW/2, yAdv - 4);
+    // X label
+    ctx.fillStyle = C.layerColors[gi]; ctx.font = "10px 'Share Tech Mono',monospace"; ctx.textAlign = 'center';
+    ctx.fillText(LBL[gi], gx + barW + gap/2 + barW/2, y1 + 16);
+  });
+
+  // Value labels on bars
+  LAYERS.forEach((_, gi) => {
+    const gx = x0 + groupW * gi + groupW * 0.12;
+    const yC = mapY(cleanAcc[gi], minV, maxV, y0, y1);
+    const yA = mapY(advAcc[gi], minV, maxV, y0, y1);
+    ctx.fillStyle = C.bg; ctx.font = "bold 9px 'Share Tech Mono',monospace"; ctx.textAlign = 'center';
+    ctx.fillText((cleanAcc[gi]*100).toFixed(1)+'%', gx + barW/2, yC + 12);
+    ctx.fillText((advAcc[gi]*100).toFixed(1)+'%', gx + barW + gap + barW/2, yA + 12);
+  });
+
+  // Legend
+  ctx.fillStyle = C.blue; ctx.fillRect(x0, y1+28, 10, 10);
+  ctx.fillStyle = C.text2; ctx.font = "10px 'Share Tech Mono',monospace"; ctx.textAlign = 'left';
+  ctx.fillText('Clean', x0+13, y1+38);
+  ctx.fillStyle = C.red; ctx.fillRect(x0+65, y1+28, 10, 10);
+  ctx.fillStyle = C.text2; ctx.fillText('Adversarial', x0+78, y1+38);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 4. WATERFALL
+// ─────────────────────────────────────────────────────────────────────────────
+function drawWaterfall(ds, atkKey) {
+  const cv = setupCanvas('chart-waterfall');
+  if (!cv) return;
+  const { ctx, w, h } = cv;
+  const pad = { t:24, r:20, b:42, l:52 };
+  const x0 = pad.l, x1 = w - pad.r, y0 = pad.t, y1 = h - pad.b;
+  const m = getMetrics(ds);
+  const isLive = !!state.liveDropsMap[`${ds}|${atkKey}`];
+  const cleanAcc = LAYERS.map(l => {
+    const lv = getLiveMet(atkKey, ds, l);
+    return (lv?.clean?.accuracy) || m[l]?.accuracy || 0.95;
+  });
+  const drops = getDrops(atkKey, ds);
+  drawLiveStamp(ctx, w, isLive);
+
+  // Bars: baseline start, then each layer's drop
+  const allBars = [{label:'Baseline', value: cleanAcc[0], isBase:true, y: cleanAcc[0]}];
+  let running = cleanAcc[0];
+  LAYERS.forEach((_, i) => {
+    running -= drops[i];
+    allBars.push({label: LBL[i], value: drops[i], isBase:false, top: running + drops[i], bottom: running, color: C.layerColors[i]});
+  });
+  allBars.push({label:'Final', value: running, isBase:true, isLast:true, y: running});
+
+  const all = allBars.map(b => b.isBase ? b.y : b.bottom);
+  const minV = Math.max(Math.min(...all, ...allBars.map(b=>b.isBase?b.y:(b.top||0))) - 0.02, 0);
+  const maxV = Math.min(Math.max(...allBars.map(b=>b.isBase?b.y:(b.top||0))) + 0.04, 1.0);
+
+  drawGrid(ctx, x0, y0, x1, y1, 5, allBars.length);
+  labelY(ctx, minV, maxV, x0, y0, y1, 5);
+
+  const barW = (x1 - x0) / allBars.length;
+
+  allBars.forEach((bar, i) => {
+    const bx = x0 + barW * i + barW * 0.12;
+    const bw = barW * 0.76;
+
+    if (bar.isBase) {
+      const color = bar.isLast ? C.red : C.blue;
+      const yTop  = mapY(bar.y, minV, maxV, y0, y1);
+      const grad  = ctx.createLinearGradient(bx, yTop, bx, y1);
+      grad.addColorStop(0, color); grad.addColorStop(1, color + '44');
+      ctx.fillStyle = grad;
+      ctx.fillRect(bx, yTop, bw, y1 - yTop);
+      ctx.fillStyle = C.bg; ctx.font = "bold 9px 'Share Tech Mono',monospace"; ctx.textAlign = 'center';
+      ctx.fillText((bar.y*100).toFixed(1)+'%', bx+bw/2, yTop + 14);
+    } else {
+      const yTop = mapY(bar.top, minV, maxV, y0, y1);
+      const yBot = mapY(bar.bottom, minV, maxV, y0, y1);
+      const grad = ctx.createLinearGradient(bx, yTop, bx, yBot);
+      grad.addColorStop(0, C.red); grad.addColorStop(1, '#ff7043');
+      ctx.fillStyle = grad;
+      ctx.fillRect(bx, yTop, bw, yBot - yTop);
+      // connector line
+      if (i > 1) {
+        const prevBar = allBars[i-1];
+        const prevBot = mapY(prevBar.isBase ? prevBar.y : prevBar.bottom, minV, maxV, y0, y1);
+        ctx.strokeStyle = C.text3; ctx.lineWidth = 1; ctx.setLineDash([3,3]);
+        ctx.beginPath(); ctx.moveTo(bx - barW*0.12, prevBot); ctx.lineTo(bx, prevBot); ctx.stroke();
+        ctx.setLineDash([]);
+      }
+      ctx.fillStyle = C.amber; ctx.font = "9px 'Share Tech Mono',monospace"; ctx.textAlign = 'center';
+      ctx.fillText('-'+(bar.value*100).toFixed(1)+'%', bx+bw/2, yTop - 4);
+    }
+
+    ctx.fillStyle = bar.isBase ? (bar.isLast ? C.red : C.blue) : C.layerColors[i-1] || C.text2;
+    ctx.font = "9px 'Share Tech Mono',monospace"; ctx.textAlign = 'center';
+    ctx.fillText(bar.label, bx+bw/2, y1+16);
+  });
+
+  // Title annotation
+  ctx.fillStyle = C.text3; ctx.font = "9px 'Share Tech Mono',monospace"; ctx.textAlign = 'left';
+  ctx.fillText('Total cascade drop: -' + (drops.reduce((s,d)=>s+d,0)*100).toFixed(1)+'%', x0, y0-6);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 5. HEATMAP — attack × layer
+// ─────────────────────────────────────────────────────────────────────────────
+function drawHeatmap(ds) {
+  const cv = setupCanvas('chart-heatmap');
+  if (!cv) return;
+  const { ctx, w, h } = cv;
+  const rows = HEATMAP_ATTACKS.length;
+  const cols = LAYERS.length;
+  const padL = 68, padT = 28, padR = 10, padB = 36;
+  const cellW = (w - padL - padR) / cols;
+  const cellH = (h - padT - padB) / rows;
+
+  // Inject live drops into heatmap data so current attack row shows real values
+  const heatDrops = HEATMAP_ATTACKS.map(atk => {
+    const liveKey = `${ds}|${atk}`;
+    return state.liveDropsMap[liveKey] || ATK_DROPS[atk] || ATK_DROPS.fgsm_010;
+  });
+
+  // Column labels (layers)
+  ctx.fillStyle = C.text2; ctx.font = "9px 'Share Tech Mono',monospace"; ctx.textAlign = 'center';
+  LBL.forEach((l, i) => {
+    ctx.fillStyle = C.layerColors[i];
+    ctx.fillText(l, padL + cellW * i + cellW/2, padT - 8);
+  });
+
+  // Row labels + cells
+  HEATMAP_ATTACKS.forEach((atk, ri) => {
+    const isThisLive = !!state.liveDropsMap[`${ds}|${atk}`];
+    ctx.fillStyle = isThisLive ? C.red : C.text2;
+    ctx.font = isThisLive ? "bold 9px 'Share Tech Mono',monospace" : "9px 'Share Tech Mono',monospace";
+    ctx.textAlign = 'right';
+    ctx.fillText((isThisLive ? '● ' : '') + HEATMAP_LABELS[ri], padL - 4, padT + cellH * ri + cellH/2 + 4);
+
+    const drops = heatDrops[ri];
+    drops.forEach((d, ci) => {
+      const intensity = Math.min(d / 0.25, 1.0);
+      const r = Math.round(20 + intensity * 220);
+      const g = Math.round(220 - intensity * 200);
+      const b = Math.round(40  - intensity * 30);
+      ctx.fillStyle = `rgb(${r},${g},${b})`;
+      ctx.fillRect(padL + cellW * ci + 1, padT + cellH * ri + 1, cellW - 2, cellH - 2);
+      // Live row border highlight
+      if (isThisLive) {
+        ctx.strokeStyle = '#ff3d3d'; ctx.lineWidth = 1.5;
+        ctx.strokeRect(padL + cellW * ci + 1, padT + cellH * ri + 1, cellW - 2, cellH - 2);
+      }
+      ctx.fillStyle = intensity > 0.5 ? '#fff' : C.bg;
+      ctx.font = "bold 9px 'Share Tech Mono',monospace"; ctx.textAlign = 'center';
+      ctx.fillText('-'+(d*100).toFixed(1)+'%', padL + cellW*ci + cellW/2, padT + cellH*ri + cellH/2 + 4);
+    });
+  });
+
+  // Colorbar legend
+  const barX = padL, barY = h - padB + 10, barW = w - padL - padR, barH = 8;
+  const grad = ctx.createLinearGradient(barX, 0, barX + barW, 0);
+  grad.addColorStop(0, 'rgb(20,220,40)'); grad.addColorStop(0.5, 'rgb(255,140,0)'); grad.addColorStop(1, 'rgb(240,20,10)');
+  ctx.fillStyle = grad; ctx.fillRect(barX, barY, barW, barH);
+  ctx.fillStyle = C.text2; ctx.font = "8px 'Share Tech Mono',monospace";
+  ctx.textAlign = 'left';  ctx.fillText('Low drop', barX, barY + barH + 10);
+  ctx.textAlign = 'right'; ctx.fillText('High drop', barX + barW, barY + barH + 10);
+
+  // Live legend
+  const anyLive = HEATMAP_ATTACKS.some(a => state.liveDropsMap[`${ds}|${a}`]);
+  if (anyLive) {
+    ctx.fillStyle = '#ff3d3d'; ctx.font = "8px 'Share Tech Mono',monospace"; ctx.textAlign = 'left';
+    ctx.fillText('● = Live API data', padL, padT - 18);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 6. MULTI-ATTACK LINE
+// ─────────────────────────────────────────────────────────────────────────────
+function drawMultiAttackLine(ds) {
+  const cv = setupCanvas('chart-multi-attack');
+  if (!cv) return;
+  const { ctx, w, h } = cv;
+  const pad = { t:20, r:20, b:36, l:52 };
+  const x0 = pad.l, x1 = w - pad.r, y0 = pad.t, y1 = h - pad.b;
+
+  const allDrops = MULTI_ATTACKS.map(a => getDrops(a, ds));
+  const isLive = MULTI_ATTACKS.some(a => !!state.liveDropsMap[`${ds}|${a}`]);
+  const minV = 0, maxV = Math.max(...allDrops.flat()) + 0.02;
+
+  drawGrid(ctx, x0, y0, x1, y1, 5, 4);
+  labelY(ctx, minV, maxV, x0, y0, y1, 5);
+  drawLiveStamp(ctx, w, isLive);
+
+  allDrops.forEach((drops, ai) => {
+    const color = C.atkColors[ai % C.atkColors.length];
+    drawLineSeries(ctx, drops, x0, x1, y0, y1, minV, maxV, color, 2, false);
+    drawDots(ctx, drops, x0, x1, y0, y1, minV, maxV, color, 4);
+  });
+
+  // X labels
+  LBL.forEach((l, i) => {
+    const x = x0 + (x1 - x0) * (i / (LBL.length - 1));
+    ctx.fillStyle = C.layerColors[i]; ctx.font = "10px 'Share Tech Mono',monospace"; ctx.textAlign = 'center';
+    ctx.fillText(l, x, y1 + 18);
+  });
+
+  // Legend
+  const leg = document.getElementById('chart-multi-legend');
+  if (leg) leg.innerHTML = MULTI_LABELS.map((l, i) => {
+    const isL = !!state.liveDropsMap[`${ds}|${MULTI_ATTACKS[i]}`];
+    return `<span style="display:inline-flex;align-items:center;gap:4px">
+      <span style="width:16px;height:3px;background:${C.atkColors[i]};display:inline-block;border-radius:2px"></span>
+      <span style="color:${isL ? '#ff3d3d' : C.text2}">${l}${isL ? ' ●' : ''}</span>
+    </span>`;
+  }).join('');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 7. AREA CHART — accuracy band across datasets
+// ─────────────────────────────────────────────────────────────────────────────
+function drawAreaChart(atkKey) {
+  const cv = setupCanvas('chart-area');
+  if (!cv) return;
+  const { ctx, w, h } = cv;
+  const pad = { t:20, r:20, b:36, l:52 };
+  const x0 = pad.l, x1 = w - pad.r, y0 = pad.t, y1 = h - pad.b;
+
+  const datasets = ['cicids2017','ember','loghub'];
+  const curDs = state.chartsDs || 'cicids2017';
+  const drops = getDrops(atkKey, curDs);
+  const isLive = !!state.liveDropsMap[`${curDs}|${atkKey}`];
+  drawLiveStamp(ctx, w, isLive);
+
+  // Per-layer: clean min/max across datasets, adv min/max
+  const cleanMinArr = LAYERS.map((l, li) => Math.min(...datasets.map(d => getMetrics(d)[l]?.accuracy || 0.95)));
+  const cleanMaxArr = LAYERS.map((l, li) => Math.max(...datasets.map(d => getMetrics(d)[l]?.accuracy || 0.95)));
+  const advMinArr   = cleanMinArr.map((v, i) => Math.max(v - drops[i], 0.30));
+  const advMaxArr   = cleanMaxArr.map((v, i) => Math.max(v - drops[i], 0.30));
+
+  const allV = [...cleanMinArr, ...cleanMaxArr, ...advMinArr, ...advMaxArr];
+  const minV = Math.max(Math.min(...allV) - 0.03, 0);
+  const maxV = Math.min(Math.max(...allV) + 0.02, 1.0);
+
+  drawGrid(ctx, x0, y0, x1, y1, 5, 4);
+  labelY(ctx, minV, maxV, x0, y0, y1, 5);
+
+  function filledBand(minArr, maxArr, fillColor, lineColor) {
+    ctx.beginPath();
+    minArr.forEach((v, i) => {
+      const x = x0 + (x1 - x0) * (i / (LAYERS.length - 1));
+      i === 0 ? ctx.moveTo(x, mapY(v, minV, maxV, y0, y1)) : ctx.lineTo(x, mapY(v, minV, maxV, y0, y1));
+    });
+    for (let i = LAYERS.length - 1; i >= 0; i--) {
+      const x = x0 + (x1 - x0) * (i / (LAYERS.length - 1));
+      ctx.lineTo(x, mapY(maxArr[i], minV, maxV, y0, y1));
+    }
+    ctx.closePath();
+    ctx.fillStyle = fillColor; ctx.fill();
+    // top line
+    drawLineSeries(ctx, maxArr, x0, x1, y0, y1, minV, maxV, lineColor, 2);
+    drawLineSeries(ctx, minArr, x0, x1, y0, y1, minV, maxV, lineColor, 1, true);
+  }
+
+  filledBand(cleanMinArr, cleanMaxArr, C.blue3, C.blue);
+  filledBand(advMinArr,   advMaxArr,   C.red3,  C.red);
+
+  // Mid lines (averages)
+  const cleanMid = LAYERS.map((_, i) => (cleanMinArr[i]+cleanMaxArr[i])/2);
+  const advMid   = LAYERS.map((_, i) => (advMinArr[i]+advMaxArr[i])/2);
+  drawLineSeries(ctx, cleanMid, x0, x1, y0, y1, minV, maxV, C.blue, 2);
+  drawLineSeries(ctx, advMid,   x0, x1, y0, y1, minV, maxV, C.red,  2);
+  drawDots(ctx, cleanMid, x0, x1, y0, y1, minV, maxV, C.blue, 4);
+  drawDots(ctx, advMid,   x0, x1, y0, y1, minV, maxV, C.red,  4);
+
+  // X labels
+  LBL.forEach((l, i) => {
+    const x = x0 + (x1-x0)*(i/(LBL.length-1));
+    ctx.fillStyle = C.layerColors[i]; ctx.font = "10px 'Share Tech Mono',monospace"; ctx.textAlign = 'center';
+    ctx.fillText(l, x, y1+18);
+  });
+
+  // Legend top-right
+  ctx.fillStyle = C.blue3.replace('0.18','0.5'); ctx.fillRect(x1-130, y0, 14, 10); ctx.strokeStyle = C.blue; ctx.strokeRect(x1-130, y0, 14, 10);
+  ctx.fillStyle = C.text2; ctx.font = "9px 'Share Tech Mono',monospace"; ctx.textAlign = 'left';
+  ctx.fillText('Clean (range + avg)', x1-113, y0+9);
+  ctx.fillStyle = C.red3.replace('0.18','0.5'); ctx.fillRect(x1-130, y0+14, 14, 10); ctx.strokeStyle = C.red; ctx.strokeRect(x1-130, y0+14, 14, 10);
+  ctx.fillStyle = C.text2; ctx.fillText('Adversarial', x1-113, y0+23);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 8. DONUT — evasion rate by layer
+// ─────────────────────────────────────────────────────────────────────────────
+function drawDonut(ds, atkKey) {
+  const cv = setupCanvas('chart-donut');
+  if (!cv) return;
+  const { ctx, w, h } = cv;
+  const cx = w / 2, cy = h / 2;
+  const R = Math.min(w, h) / 2 - 32;
+  const r = R * 0.55;
+  const drops  = getDrops(atkKey, ds);
+  const isLive = !!state.liveDropsMap[`${ds}|${atkKey}`];
+  // Use real evasion rates from API if available
+  const evasion = LAYERS.map((l, i) => {
+    const lv = getLiveMet(atkKey, ds, l);
+    return lv ? lv.evasion : Math.min(drops[i] * 2.5, 0.95);
+  });
+  drawLiveStamp(ctx, w, isLive);
+
+  const total = evasion.reduce((s, v) => s + v, 0);
+  let start = -Math.PI / 2;
+  evasion.forEach((v, i) => {
+    const sweep = (v / total) * 2 * Math.PI;
+    const mid = start + sweep / 2;
+    const color = C.layerColors[i];
+
+    // Outer arc
+    ctx.beginPath(); ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, R, start, start + sweep);
+    ctx.closePath();
+    ctx.fillStyle = color + '33'; ctx.fill();
+    ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.stroke();
+
+    // Inner arc (donut hole)
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, start, start + sweep);
+    ctx.closePath();
+    ctx.fillStyle = C.bg; ctx.fill();
+
+    // Slice label
+    if (v / total > 0.08) {
+      const lx = cx + (R + r) / 2 * Math.cos(mid);
+      const ly = cy + (R + r) / 2 * Math.sin(mid);
+      ctx.fillStyle = '#fff'; ctx.font = "bold 9px 'Share Tech Mono',monospace"; ctx.textAlign = 'center';
+      ctx.fillText((v * 100).toFixed(1) + '%', lx, ly + 4);
+    }
+    start += sweep;
+  });
+
+  // Centre label
+  ctx.fillStyle = C.text; ctx.font = "bold 13px 'Share Tech Mono',monospace"; ctx.textAlign = 'center';
+  ctx.fillText('Evasion', cx, cy - 6);
+  ctx.fillStyle = C.red; ctx.font = "bold 16px 'Share Tech Mono',monospace";
+  const avgEvasion = evasion.reduce((s,v)=>s+v,0) / evasion.length;
+  ctx.fillText((avgEvasion * 100).toFixed(1) + '%', cx, cy + 14);
+  ctx.fillStyle = C.text3; ctx.font = "9px 'Share Tech Mono',monospace";
+  ctx.fillText('avg rate', cx, cy + 28);
+
+  // Legend
+  const leg = document.getElementById('chart-donut-legend');
+  if (leg) leg.innerHTML = LAYERS.map((l, i) =>
+    `<span style="display:inline-flex;align-items:center;gap:4px">
+      <span style="width:10px;height:10px;background:${C.layerColors[i]};display:inline-block;border-radius:2px"></span>
+      <span style="color:${C.text2}">${l} (${(evasion[i]*100).toFixed(1)}%)</span>
+    </span>`
+  ).join('');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 9. SCATTER — TPR vs FPR shift
+// ─────────────────────────────────────────────────────────────────────────────
+function drawScatter(ds, atkKey) {
+  const cv = setupCanvas('chart-scatter');
+  if (!cv) return;
+  const { ctx, w, h } = cv;
+  const pad = { t:24, r:20, b:42, l:52 };
+  const x0 = pad.l, x1 = w - pad.r, y0 = pad.t, y1 = h - pad.b;
+  const drops  = getDrops(atkKey, ds);
+  const isLive = !!state.liveDropsMap[`${ds}|${atkKey}`];
+  const m = getMetrics(ds);
+  drawLiveStamp(ctx, w, isLive);
+  // axes: X=FPR (0–0.25), Y=TPR (0.7–1.0)
+  const minX=0, maxX=0.20, minY=0.70, maxY=1.0;
+  drawGrid(ctx, x0, y0, x1, y1, 5, 4);
+
+  // Axis labels
+  ctx.fillStyle = C.text2; ctx.font = "9px 'Share Tech Mono',monospace";
+  for (let i=0;i<=4;i++){
+    const v = minX + (maxX-minX)*(i/4);
+    const x = x0 + (x1-x0)*(i/4);
+    ctx.textAlign='center'; ctx.fillText((v*100).toFixed(0)+'%', x, y1+14);
+  }
+  for (let i=0;i<=5;i++){
+    const v = minY + (maxY-minY)*(i/5);
+    const y = y1 - (y1-y0)*(i/5);
+    ctx.textAlign='right'; ctx.fillText((v*100).toFixed(0)+'%', x0-4, y+3);
+  }
+  ctx.fillStyle = C.text3; ctx.textAlign='center'; ctx.font="10px 'Share Tech Mono',monospace";
+  ctx.fillText('FPR →', (x0+x1)/2, y1+28);
+  ctx.save(); ctx.translate(12, (y0+y1)/2); ctx.rotate(-Math.PI/2);
+  ctx.fillText('TPR ↑', 0, 0); ctx.restore();
+
+  // Ideal region
+  ctx.fillStyle = 'rgba(0,230,118,0.06)';
+  ctx.fillRect(x0, y0, (x1-x0)*0.15, (y1-y0)*0.2);
+  ctx.strokeStyle = 'rgba(0,230,118,0.2)'; ctx.setLineDash([3,3]); ctx.lineWidth=1;
+  ctx.strokeRect(x0, y0, (x1-x0)*0.15, (y1-y0)*0.2); ctx.setLineDash([]);
+  ctx.fillStyle = C.green; ctx.font = "8px 'Share Tech Mono',monospace"; ctx.textAlign='left';
+  ctx.fillText('Ideal', x0+2, y0+10);
+
+  LAYERS.forEach((l, i) => {
+    const lm    = m[l] || {};
+    const lv    = getLiveMet(atkKey, ds, l);
+    const cTPR  = (lv?.clean?.tpr)  || lm.tpr  || 0.95;
+    const cFPR  = (lv?.clean?.fpr)  || lm.fpr  || 0.03;
+    const aTPR  = (lv?.adv?.tpr)    || Math.max(cTPR - drops[i] * 0.9, 0.3);
+    const aFPR  = (lv?.adv?.fpr)    || Math.min(cFPR + drops[i] * 0.6, 0.99);
+    const color = C.layerColors[i];
+
+    const mapPt = (fpr, tpr) => ({
+      x: x0 + (x1-x0) * Math.min((fpr-minX)/(maxX-minX), 1),
+      y: y0 + (y1-y0) * (1 - Math.min((tpr-minY)/(maxY-minY), 1)),
+    });
+
+    const c = mapPt(cFPR, cTPR);
+    const a = mapPt(aFPR, aTPR);
+
+    // Arrow
+    ctx.strokeStyle = color + 'aa'; ctx.lineWidth=1.5; ctx.setLineDash([3,3]);
+    ctx.beginPath(); ctx.moveTo(c.x, c.y); ctx.lineTo(a.x, a.y); ctx.stroke(); ctx.setLineDash([]);
+    // Arrowhead
+    const angle = Math.atan2(a.y-c.y, a.x-c.x);
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.moveTo(a.x, a.y);
+    ctx.lineTo(a.x - 8*Math.cos(angle-0.4), a.y - 8*Math.sin(angle-0.4));
+    ctx.lineTo(a.x - 8*Math.cos(angle+0.4), a.y - 8*Math.sin(angle+0.4));
+    ctx.closePath(); ctx.fill();
+
+    // Clean dot
+    ctx.beginPath(); ctx.arc(c.x, c.y, 6, 0, Math.PI*2);
+    ctx.fillStyle = C.bg; ctx.fill();
+    ctx.strokeStyle = color; ctx.lineWidth=2; ctx.stroke();
+
+    // Adv cross
+    ctx.strokeStyle = color; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(a.x-5,a.y-5); ctx.lineTo(a.x+5,a.y+5); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(a.x+5,a.y-5); ctx.lineTo(a.x-5,a.y+5); ctx.stroke();
+
+    // Label
+    ctx.fillStyle = color; ctx.font="9px 'Share Tech Mono',monospace"; ctx.textAlign='center';
+    ctx.fillText(LBL[i], c.x, c.y-9);
+  });
+
+  // Legend
+  ctx.fillStyle = C.text3; ctx.font="9px 'Share Tech Mono',monospace"; ctx.textAlign='left';
+  ctx.fillText('● Clean  × Adversarial  → direction of shift', x0, y1+34);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MAIN REFRESH
+// ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+//  LIVE ATTACK SYNC — push real API results into the chart engine
+// ─────────────────────────────────────────────────────────────────────────────
+
+// state.liveDropsMap  = { "cicids2017|fgsm_010": [d0,d1,d2,d3,d4], … }
+// state.liveMetrics   = { "cicids2017|fgsm_010": { ingestion:{clean,adv}, … } }
+if (!state.liveDropsMap) state.liveDropsMap  = {};
+if (!state.liveMetrics)  state.liveMetrics   = {};
+if (!state.chartsDs)     state.chartsDs      = 'cicids2017';
+
+function syncLiveDropsToCharts(d, ds, atkKey) {
+  // Extract real per-layer drops from API response
+  const layers = d.layers || [];
+  const drops  = LAYERS.map((_, i) => {
+    const lr = layers[i] || layers.find(l => l.layer === LAYERS[i]);
+    return lr ? (lr.acc_drop || 0) : 0;
+  });
+  const metricsMap = {};
+  LAYERS.forEach((l, i) => {
+    const lr = layers[i] || layers.find(x => x.layer === l);
+    if (lr) metricsMap[l] = { clean: lr.clean || {}, adv: lr.adversarial || {}, evasion: lr.evasion || 0 };
+  });
+
+  const key = `${ds}|${atkKey}`;
+  state.liveDropsMap[key]  = drops;
+  state.liveMetrics[key]   = metricsMap;
+  state.chartsDs           = ds;
+  state.chartsAtkKey       = atkKey;
+
+  // Sync the charts-tab dataset buttons
+  document.querySelectorAll('[data-ds5]').forEach(b => {
+    b.classList.toggle('active', b.dataset.ds5 === ds);
+  });
+
+  // Sync the charts-tab attack selector — add option if not present
+  const sel = document.getElementById('chart-atk-select');
+  if (sel) {
+    let found = false;
+    for (const opt of sel.options) { if (opt.value === atkKey) { found = true; break; } }
+    if (!found) {
+      const opt = document.createElement('option');
+      opt.value = atkKey; opt.text = atkKey + ' (live)';
+      sel.appendChild(opt);
+    }
+    sel.value = atkKey;
+  }
+
+  // Show LIVE badge on tab
+  const tabEl = document.querySelector('[data-tab="charts"]');
+  if (tabEl && !tabEl.querySelector('.live-badge')) {
+    const badge = document.createElement('span');
+    badge.className = 'live-badge';
+    badge.style.cssText = 'margin-left:6px;padding:1px 6px;border-radius:8px;font-size:9px;font-weight:700;background:rgba(255,61,61,0.18);color:#ff3d3d;border:1px solid rgba(255,61,61,0.4);animation:pulse 1.4s infinite;letter-spacing:.06em';
+    badge.textContent = 'LIVE';
+    tabEl.appendChild(badge);
+  }
+
+  // Show live banner on charts page
+  let banner = document.getElementById('live-chart-banner');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'live-chart-banner';
+    banner.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 14px;background:rgba(255,61,61,0.1);border:1px solid rgba(255,61,61,0.3);border-radius:6px;margin-bottom:14px;font-size:11px;color:var(--text)';
+    const page = document.getElementById('page-charts');
+    page.insertBefore(banner, page.firstChild);
+  }
+  banner.innerHTML = `
+    <span style="width:8px;height:8px;border-radius:50%;background:#ff3d3d;display:inline-block;animation:pulse 1.4s infinite"></span>
+    <strong style="color:#ff3d3d">LIVE RESULTS</strong>
+    <span style="color:var(--text2)">Showing real API data from last attack:</span>
+    <span style="font-family:var(--mono);color:var(--blue)">${atkKey.toUpperCase()}</span>
+    <span style="color:var(--text2)">on</span>
+    <span style="font-family:var(--mono);color:var(--amber)">${ds.toUpperCase()}</span>
+    <span style="color:var(--text2)">— avg drop:</span>
+    <span style="font-family:var(--mono);color:#ff3d3d">${(drops.reduce((s,v)=>s+v,0)/drops.length*100).toFixed(2)}%</span>
+    <span style="margin-left:auto;font-size:10px;color:var(--text3)">Charts update automatically after every attack</span>`;
+
+  // Redraw all charts with real data (wait for layout if charts tab not yet visible)
+  const chartsPage = document.getElementById('page-charts');
+  if (chartsPage && chartsPage.classList.contains('active')) {
+    requestAnimationFrame(() => refreshAllCharts());
+  } else {
+    // Flash the tab to draw attention
+    const tab = document.querySelector('[data-tab="charts"]');
+    if (tab) {
+      tab.style.transition = 'background .3s';
+      tab.style.background = 'rgba(255,61,61,0.15)';
+      setTimeout(() => { tab.style.background = ''; }, 1200);
+    }
+    // Pre-render so charts are ready when user clicks over
+    setTimeout(() => refreshAllCharts(), 100);
+  }
+  log('📈 Charts updated with live attack results ('+atkKey+')', 'ok');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  getDrops — returns real API drops if available, else ATK_DROPS fallback
+// ─────────────────────────────────────────────────────────────────────────────
+function getDrops(atkKey, ds) {
+  const key = `${ds}|${atkKey}`;
+  return state.liveDropsMap[key] || ATK_DROPS[atkKey] || ATK_DROPS.fgsm_010;
+}
+
+// getLiveMetric — real clean/adv metric for a layer (or null)
+function getLiveMet(atkKey, ds, layer) {
+  const key = `${ds}|${atkKey}`;
+  return (state.liveMetrics[key] || {})[layer] || null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  LIVE INDICATOR — shown inside each canvas chart when real data is used
+// ─────────────────────────────────────────────────────────────────────────────
+function drawLiveStamp(ctx, w, isLive) {
+  if (!isLive) return;
+  ctx.save();
+  ctx.font = "bold 9px 'Share Tech Mono',monospace";
+  ctx.fillStyle = 'rgba(255,61,61,0.8)';
+  const txt = '● LIVE DATA';
+  const tw  = ctx.measureText(txt).width;
+  ctx.fillStyle = 'rgba(255,61,61,0.12)';
+  ctx.fillRect(w - tw - 20, 4, tw + 14, 16);
+  ctx.fillStyle = '#ff3d3d';
+  ctx.textAlign = 'right';
+  ctx.fillText(txt, w - 8, 15);
+  ctx.restore();
+}
+
+function refreshAllCharts() {
+  const ds  = state.chartsDs || 'cicids2017';
+  const atk = document.getElementById('chart-atk-select')?.value || 'fgsm_010';
+  drawLineChart(ds, atk);
+  drawRadarChart(ds, atk);
+  drawGroupedBar(ds, atk);
+  drawWaterfall(ds, atk);
+  drawHeatmap(ds);
+  drawMultiAttackLine(ds);
+  drawAreaChart(atk);
+  drawDonut(ds, atk);
+  drawScatter(ds, atk);
+}
+
+// Redraw on tab click
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    if (t.dataset.tab === 'charts') {
+      requestAnimationFrame(() => requestAnimationFrame(refreshAllCharts));
+    }
+  });
+});
+
+// Redraw on resize
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    if (document.getElementById('page-charts').classList.contains('active')) {
+      refreshAllCharts();
+    }
+  }, 200);
+});
+</script>
+</body>
+</html>

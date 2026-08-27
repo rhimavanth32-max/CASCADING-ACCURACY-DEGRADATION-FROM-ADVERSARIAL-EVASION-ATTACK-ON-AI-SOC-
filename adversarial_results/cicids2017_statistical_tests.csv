@@ -1,0 +1,6 @@
+dataset,layer,algo,n_attacks,mean_acc_drop,std_acc_drop,ci_95_lower,ci_95_upper,wilcoxon_stat,wilcoxon_p,significant_005
+cicids2017,ingestion,Random Forest,30,0.1992,0.2127,0.1275,0.2818,454.0,3e-06,True
+cicids2017,triage,Gradient Boosting,30,0.1887,0.175,0.1307,0.2559,465.0,1e-06,True
+cicids2017,detection,MLP Neural Net,30,0.2927,0.2369,0.2112,0.386,465.0,1e-06,True
+cicids2017,siem,Random Forest,30,0.203,0.2143,0.1311,0.2862,456.0,2e-06,True
+cicids2017,soar,Gradient Boosting,30,0.1806,0.1665,0.1232,0.2444,462.0,1e-06,True

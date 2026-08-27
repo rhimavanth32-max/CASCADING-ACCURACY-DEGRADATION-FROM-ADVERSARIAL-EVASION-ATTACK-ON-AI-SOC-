@@ -1,0 +1,11 @@
+dataset,layer_a,layer_b,mean_drop_a,mean_drop_b,wilcoxon_stat,wilcoxon_p,significant_005,higher_drop
+cicids2017,ingestion,triage,0.1992,0.1887,207.0,0.599897,False,ingestion
+cicids2017,ingestion,detection,0.1992,0.2927,26.0,2.2e-05,True,detection
+cicids2017,ingestion,siem,0.1992,0.203,59.0,0.000358,True,siem
+cicids2017,ingestion,soar,0.1992,0.1806,175.0,0.236887,False,ingestion
+cicids2017,triage,detection,0.1887,0.2927,33.0,4.1e-05,True,detection
+cicids2017,triage,siem,0.1887,0.203,186.0,0.338805,False,siem
+cicids2017,triage,soar,0.1887,0.1806,164.0,0.158811,False,triage
+cicids2017,detection,siem,0.2927,0.203,30.0,3.1e-05,True,detection
+cicids2017,detection,soar,0.2927,0.1806,31.0,3.4e-05,True,detection
+cicids2017,siem,soar,0.203,0.1806,138.0,0.051906,False,siem
