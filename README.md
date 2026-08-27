@@ -76,10 +76,10 @@ python datapreprocessor.py
 ### Running the Pipeline
 
 ```bash
-python ai-soc/<entry_point>.py
+python ai-soc/app.py
 ```
 
-> Replace `<entry_point>.py` with the actual script that launches the attack engine / dashboard inside `ai-soc/` — let me know its name and I'll fill this in precisely.
+> Replace `app.py` with the actual script that launches the attack engine / dashboard inside `ai-soc/` — let me know its name and I'll fill this in precisely.
 
 ## Dashboard
 
