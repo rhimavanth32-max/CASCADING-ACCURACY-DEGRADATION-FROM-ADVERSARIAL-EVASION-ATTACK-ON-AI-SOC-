@@ -88,7 +88,6 @@ The dashboard visualizes accuracy degradation across all nine attack families an
 ## Authors
 
 - **Himavanth** — JSS Science and Technology University, Dept. of Computer Science and Engineering (Cybersecurity)
-- **Dr. Madhusudhan G.** — JSS STU, Cybersecurity Department
 
 ## Citation
 
