@@ -89,14 +89,16 @@ The dashboard visualizes accuracy degradation across all nine attack families an
 
 - **Himavanth** — JSS Science and Technology University, Dept. of Computer Science and Engineering (Cybersecurity)
 - **Dr. Madhusudhan G.** — JSS STU, Cybersecurity Department
-- **Dr. Prasanna B.T.** — JSS STU, Cybersecurity Department
 
 ## Citation
 
 If you use this work, please cite:
 
-> *Cascading Accuracy Degradation in AI-SOC Pipelines* (IEEE format), Himavanth, Madhusudhan G., Prasanna B.T. — JSS Science and Technology University.
+> *Cascading Accuracy Degradation in AI-SOC Pipelines* (ACIG), Himavanth — JSS Science and Technology University.
 
 ## License
 
-Specify your license here (e.g., MIT, Apache 2.0).
+## 📜 License
+
+This project is licensed under the MIT License.
+See the [LICENSE](LICENSE) file for details.
