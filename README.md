@@ -96,9 +96,3 @@ If you use this work, please cite:
 
 > *Cascading Accuracy Degradation in AI-SOC Pipelines* (ACIG), Himavanth — JSS Science and Technology University.
 
-## License
-
-## 📜 License
-
-This project is licensed under the MIT License.
-See the [LICENSE](LICENSE) file for details.
