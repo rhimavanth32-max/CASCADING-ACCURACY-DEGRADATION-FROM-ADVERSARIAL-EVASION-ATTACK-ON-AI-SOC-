@@ -61,8 +61,8 @@ Results are validated with:
 ### Installation
 
 ```bash
-git clone https://github.com/<your-username>/<repo-name>.git
-cd <repo-name>
+git clone https://github.com/rhimavanth32-max/CASCADING-ACCURACY-DEGRADATION-FROM-ADVERSARIAL-EVASION-ATTACK-ON-AI-SOC-.git
+cd CASCADING-ACCURACY-DEGRADATION-FROM-ADVERSARIAL-EVASION-ATTACK-ON-AI-SOC-
 pip install -r requirements.txt
 ```
 
